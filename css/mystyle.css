@@ -1,0 +1,1449 @@
+/* mystyle.css */
+
+/* ============== BASE & RESET ============== */
+/* Importación de la fuente Montserrat desde Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap");
+
+/* Reseteo universal:
+   - box-sizing: border-box -> El padding y borde no incrementan el tamaño total del elemento.
+   - margin: 0 y padding: 0 -> Elimina los márgenes y paddings por defecto de los navegadores. */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Estilos base para HTML y Body */
+body,
+html {
+  /* Aplicado a ambos para consistencia */
+  font-family: "Montserrat", sans-serif; /* Fuente principal de la aplicación */
+  background-color: #f9f9f9; /* Color de fondo general */
+  color: #2b2b2b; /* Color de texto principal */
+  scroll-behavior: smooth; /* Desplazamiento suave para anclas internas */
+  padding-top: 63px;
+  font-size: 14px; /* Tamaño de fuente base para la aplicación */
+}
+
+/* Estilos base para enlaces (<a>) */
+a {
+  text-decoration: none; /* Elimina el subrayado por defecto de los enlaces */
+  color: inherit; /* Los enlaces heredan el color de su elemento padre */
+}
+
+/* Estilos base para líneas horizontales (<hr>) */
+hr {
+  border: none; /* Elimina el borde por defecto */
+  height: 2px; /* Altura de la línea */
+  background-color: #ccc; /* Color de fondo de la línea */
+  margin: 2px 0; /* Margen vertical mínimo */
+}
+
+/* ============== HEADER FIXED ============== */
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  background-color: #2c3e50;
+  color: white;
+  padding: 10px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  height: 120px;
+}
+
+.logo img {
+  max-width: 180px;
+  height: auto;
+}
+
+.titulo {
+  margin-left: 20px;
+}
+
+.titulo h1 {
+  font-size: 1.286em;
+  font-weight: 700;
+}
+
+.titulo h2 {
+  font-size: 0.95em;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.titulo hr {
+  width: 200px;
+  background-color: #18bc9c;
+}
+
+/* ============== MENU FIXED ============== */
+.menu_bar {
+  background-color: #34495e;
+  position: fixed;
+  top: 120px; /* Debajo del encabezado */
+  left: 0;
+  right: 0;
+  z-index: 299;
+  height: 22px;
+}
+
+.menu_bar ul {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  padding: 1px;
+  gap: 25px;
+  height: 100%;
+  align-items: center;
+}
+
+.menu_bar ul li a {
+  color: white;
+  padding: 0px 16px;
+  border-radius: 6px;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  font-size: 1em;
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  background-size: 200% 100%;
+  background-position: right bottom;
+}
+
+.menu_bar ul li a:hover {
+  background: none;
+  color: #18bc9c;
+  transform: translateY(-2px);
+  box-shadow: none;
+  letter-spacing: 0.3px;
+  background-position: left bottom;
+}
+
+.menu_bar ul li a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 2px;
+  background: #2c3e50;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+  transform-origin: right;
+}
+
+.menu_bar ul li a:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+  background: #18bc9c;
+}
+
+.menu_bar ul li a.active {
+  color: #18bc9c;
+  font-weight: 600;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.menu_bar ul li a.active::after {
+  transform: scaleX(1);
+  background: #18bc9c;
+}
+
+/* ============== ASIDE FIXED ============== */
+.layout {
+  display: flex;
+  min-height: calc(100vh - 142px);
+}
+
+aside.sidebar {
+  width: 200px;
+  background: #2c3e50;
+  color: white;
+  padding: 2px;
+  position: fixed;
+  top: 142px;
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+  z-index: 100;
+  border-right: 2px solid #18bc9c;
+}
+
+aside.sidebar h3 {
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 1.05em;
+  text-align: center;
+  padding-top: 10px;
+}
+
+aside.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+aside.sidebar ul li {
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 0.857em;
+}
+
+aside.sidebar ul li.active,
+aside.sidebar ul li:hover {
+  background: #18bc9c;
+  color: #fff;
+}
+
+aside.sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+aside.sidebar::-webkit-scrollbar-track {
+  background: #2c3e50;
+}
+aside.sidebar::-webkit-scrollbar-thumb {
+  background-color: #18bc9c;
+  border-radius: 10px;
+}
+
+/* ============== MAIN CONTENT ============== */
+.main-content {
+  flex-grow: 1;
+  padding: 0px;
+  margin-left: 200px;
+  overflow-x: auto;
+  min-height: calc(100vh - 142px);
+}
+
+/* ============== COMPONENTES ============== */
+.container_page {
+  padding: 20px 3%;
+}
+
+.main {
+  text-align: center;
+  padding: 40px 10px 40px;
+  background-color: #ecf0f1;
+  height: auto;
+}
+
+.grid_container {
+  display: grid;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+/* --- REVERTIDO A AUTO-FIT PARA CARDS_GRID --- */
+.cards_grid {
+  display: grid;
+  /* Las tarjetas tienen un width de 280px (desde JS) + padding de 15px*2 = 310px.
+     minmax(300px, 1fr) podría ser un buen punto de partida.
+     O, si el 'transform: scale(0.83)' está activo para las cards de cobertura,
+     el tamaño visual es más pequeño (~257px), entonces minmax(250px, 1fr) sería apropiado.
+     Por ahora, usaré un valor intermedio, puedes ajustarlo según el tamaño visual final de tus .card */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0px;
+  margin-top: 10px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
+  /* Si quieres que las tarjetas tengan un tamaño fijo y que el grid se ajuste,
+     puedes quitar el scale o ajustarlo. Si lo quitas, el minmax del grid debe
+     considerar el ancho total de la tarjeta (JS width + padding CSS). */
+  transform: scale(
+    0.83
+  ); /* Mantenido de tu CSS anterior para consistencia, ajústalo si es necesario */
+  transform-origin: center;
+}
+.card:hover {
+  transform: scale(0.83) translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.card-title {
+  text-align: center;
+  margin-bottom: 10px;
+  font-size: 0.9em;
+}
+.card-title h3 {
+  margin: 0 0 3px 0;
+  font-weight: 600;
+}
+.card-title small {
+  font-size: 0.85em;
+  color: #555;
+}
+/* Refinamiento para .promedio - Detalles Ajustados */
+.promedio {
+  text-align: center;
+  margin-top: 15px;        
+  padding-top: 12px;         /* Un poco más de espacio entre la línea y el texto */
+  padding-bottom: 10px;       /* Un poco más de espacio debajo del texto */
+  background-color: transparent; 
+  color: #75828F;            /* Etiqueta "Cobertura:": Un gris ligeramente más oscuro y legible que #bdc3c7 */
+  font-size: 0.88em;          /* Ajuste fino al tamaño de la etiqueta si es necesario */
+  line-height: 1.5;   
+  font-weight: bolder;        
+  
+  /* Línea superior: Un gris un poco más visible para mejor definición */
+  border-top: 1px solid #ced4da; 
+  /* OPCIÓN ALTERNATIVA para la línea (más "juvenil" y temática): */
+  /* border-top: 2px solid #18bc9c; */ /* Línea con el color de acento principal y más gruesa */
+  
+  box-shadow: none;
+  border-radius: 0; 
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+}
+
+.promedio strong {
+  color: #18bc9c;            
+  font-size: 1.3em;           /* Mantenemos este tamaño que parece funcionar bien */
+  font-weight: 700;           
+  margin-left: 6px;           
+}
+
+.promedio strong {
+  color: #18bc9c; /* Color para el valor del porcentaje (como lo tenías) */
+  font-size: 1.3em; /* Tamaño para el valor (como lo tenías) */
+  font-weight: 700; /* Peso para el valor (como lo tenías) */
+  margin-left: 6px; /* Margen izquierdo para el valor (como lo tenías) */
+}
+.card_prin {
+  background-color: #34495e;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px auto;
+  width: 80%;
+}
+.card_prin h4 {
+  margin-bottom: 10px;
+  color: #f39c12;
+  font-size: 1.143em;
+}
+.card_prin p {
+  line-height: 1.6;
+  font-size: 0.929em;
+}
+
+label {
+  font-weight: 600;
+  font-size: 0.929em;
+}
+select {
+  padding: 5px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 0.8em;
+}
+
+.chart-container-d3 {
+  overflow: visible;
+  margin: 1rem auto;
+  min-height: 300px;
+}
+.chart-container-d3 .axis text {
+  font-family: "Montserrat", sans-serif;
+  font-size: 0.75em;
+  fill: #2c3e50;
+}
+.chart-container-d3 .axis path,
+.chart-container-d3 .axis line {
+  stroke: #bdc3c7;
+  shape-rendering: crispEdges;
+}
+.chart-container-d3 .label .bullet {
+  font-size: 1.5em;
+}
+.chart-container-d3 .label .label-text {
+  font-size: 0.9em;
+  fill: #333;
+}
+
+#detalleInfo {
+  background-color: #2c3e50ee; /* Fondo oscuro semi-transparente */
+  color: white;                 /* Color de texto general para el tooltip */
+  padding: 15px;
+  border-radius: 8px;
+  position: absolute;           /* Posicionado por JavaScript (left, top) */
+  display: none;              /* Se muestra vía JavaScript */
+  z-index: 999;               /* Asegura que esté por encima de otros elementos */
+  font-size: 0.8em;           /* Tamaño de fuente base para el contenido del tooltip */
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25); /* Sombra para darle profundidad */
+
+  /* --- Ajustes de Ancho para Adaptabilidad y Estabilidad --- */
+  width: auto;                /* Permite que el ancho se ajuste al contenido */
+  min-width: 200px;           /* Ancho mínimo para mantener la forma */
+  max-width: 330px;           /* Ancho máximo para evitar que sea demasiado extenso */
+
+  /* --- Ajustes de Altura Opcionales (para escritorio, si el contenido es muy largo) --- */
+  /* Si el tooltip se vuelve demasiado alto en algunos casos, puedes descomentar estas líneas: */
+  /* max-height: 75vh; */    /* Límite de altura (ej. 75% de la altura de la ventana) */
+  /* overflow-y: auto; */   /* Añade scroll vertical si el contenido excede max-height */
+  
+  /* Asegura que las palabras largas se corten y no rompan el layout */
+  word-wrap: break-word;      /* Para navegadores más antiguos */
+  overflow-wrap: break-word;  /* Estándar actual */
+}
+
+#detalleInfo h1#tituloDetalle {
+  margin-top: 0;
+  margin-bottom: 10px;      /* Margen inferior después del título */
+  font-size: 1.1em;         /* Tamaño del título */
+  border-bottom: 1px solid #4f657d; /* Línea divisoria sutil debajo del título */
+  padding-bottom: 8px;      /* Espacio entre el texto del título y su borde inferior */
+  color: #ffffff;           /* Título en blanco brillante */
+}
+
+#detalleInfo p#textoDetalle ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#detalleInfo p#textoDetalle li {
+  margin-bottom: 6px;       /* Espacio entre los ítems de la lista */
+  line-height: 1.45;        /* Interlineado para mejor lectura de los ítems */
+}
+
+/* Estilos para elementos específicos dentro del tooltip (conservados de tu bloque original) */
+#detalleInfo .grupo-edad { /* Si usas esta clase dentro del tooltip */
+  font-weight: bold;
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1em; /* Relativo al font-size de #detalleInfo (0.8em base) */
+}
+
+#detalleInfo .bullet { /* Para los bullets en la lista de detalles */
+  margin-right: 5px;
+  /* El color del bullet se aplica inline desde JS, así que no es necesario aquí */
+}
+
+/* Estilo para el valor específico del detalle (conservado de tu bloque original) */
+.valor_detalle { /* Esta clase se usa en el span que envuelve el valor y el % */
+  color: #f1c40f; /* Color amarillo/dorado para destacar el valor */
+  font-weight: bold;
+}
+
+.chart-tooltip {
+  backdrop-filter: blur(3px);
+  border: 2px solid #18bc9c !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.tooltip-box {
+  background: #2c3e50;
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid #18bc9c;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.tooltip-header {
+  margin-bottom: 10px;
+}
+.valor-destacado {
+  color: #f1c40f;
+  font-size: 1.143em;
+  font-weight: 700;
+}
+
+.main h2 {
+  font-size: 2.4em;
+  color: #2c3e50;
+}
+.main h3 {
+  font-size: 1.4em;
+  color: #18bc9c;
+}
+.main hr {
+  background-color: #18bc9c;
+  width: 100px;
+  height: 3px;
+  margin: 20px auto;
+}
+
+/* ============== TABS ============== */
+nav.tabs,
+nav.tabs-months {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tab-title {
+  margin-right: 10px;
+  font-weight: 600;
+  font-size: 0.95em;
+  color: #2c3e50;
+}
+.tab-list {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  flex-grow: 1;
+  flex-wrap: nowrap;
+}
+.tab-list-scrollable {
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: #18bc9c #34495e;
+}
+.tab-list-scrollable::-webkit-scrollbar {
+  height: 6px;
+}
+.tab-list-scrollable::-webkit-scrollbar-track {
+  background: #34495e;
+  border-radius: 3px;
+}
+.tab-list-scrollable::-webkit-scrollbar-thumb {
+  background-color: #18bc9c;
+  border-radius: 3px;
+}
+.tab-list li {
+  margin-right: 3px;
+  padding: 4px 12px;
+  border-radius: 6px 6px 0 0;
+  background: #ecf0f1;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  font-size: 0.85em;
+  color: #34495e;
+  border: 1px solid #bdc3c7;
+  border-bottom: none;
+  white-space: nowrap;
+}
+.tab-list li:hover {
+  background: #bdc3c7;
+  color: #2c3e50;
+}
+.tab-list li.active {
+  background: #18bc9c;
+  color: white;
+  font-weight: 600;
+  border-color: #18bc9c;
+}
+
+/* Alternativa 3: Minimalista Moderno (Énfasis en Tipografía) */
+.visualization-title-container {
+  text-align: center;
+  margin-top: 25px;     /* Buen margen superior */
+  margin-bottom: 15px;  /* Buen margen inferior */
+}
+
+#coberturasVisualizationTitle {
+  font-size: 1em;         /* Tamaño de fuente más grande al no tener otros adornos */
+  color: #34495e;            /* Un color oscuro, ligeramente más suave que #2c3e50 */
+  font-weight: 700;         /* Más peso para darle impacto */
+  letter-spacing: 1px;      /* Espaciado entre letras para un look moderno y aireado */
+  text-transform: none;     /* O prueba 'uppercase' para un estilo gráfico diferente */
+  padding-bottom: 0;        /* Sin padding inferior ya que no hay subrayado */
+  position: relative;       /* Aunque no se use ::after, buena práctica mantenerlo por si acaso */
+  display: inline-block;
+}
+
+#coberturasVisualizationTitle::after { /* Asegura que no haya subrayado de estilos previos */
+  content: none; 
+}
+
+        /* Estilos para el interruptor de modo (toggle switch) */
+        .mode-selector-wrapper { /* Nuevo contenedor para alinear el texto y el switch */
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Centra todo el bloque del selector */
+            margin-bottom: 20px;
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            gap: 8px;
+        }
+
+        .mode-selector-wrapper .main-label { /* "Visualizar por:" */
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.95em;
+            margin-right: 10px;
+        }
+        
+        .mode-selector-wrapper .mode-text { /* "Unidad Médica" o "Grupo Demográfico" */
+            font-size: 0.9em;
+            color: #555;
+            cursor: default; /* O pointer si se quiere que sean clickables para cambiar modo */
+            transition: font-weight 0.2s, color 0.2s;
+        }
+
+        .mode-selector-wrapper .mode-text.active-mode-label {
+            font-weight: bold;
+            color: #18bc9c; /* Color de acento IMSS */
+        }
+
+        /* Estilos para el interruptor (más pequeño) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px; /* Más pequeño */
+            height: 20px; /* Más pequeño */
+            vertical-align: middle;
+            margin: 0 5px; /* Pequeño margen alrededor del switch */
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 20px; /* Ajustado al nuevo tamaño */
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px; /* Más pequeño */
+            width: 14px;  /* Más pequeño */
+            left: 3px;    /* Ajustado */
+            bottom: 3px;  /* Ajustado */
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #18bc9c; /* Color activo IMSS */
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #18bc9c;
+        }
+
+        input:checked + .slider:before {
+            -webkit-transform: translateX(20px); /* Ajustado */
+            -ms-transform: translateX(20px);
+            transform: translateX(20px);
+        }
+        /* Fin de estilos del interruptor */
+
+        .hidden-filter {
+            display: none !important;
+        }
+
+        #visualizationMasterContainer { /* Nuevo contenedor para gráficos y leyenda */
+            display: flex;
+            flex-direction: row;
+            gap: 20px; /* Espacio entre la cuadrícula principal y la leyenda */
+        }
+
+        #chartsArea { /* Contenedor para #delegacionalChartContainer y #cardsGrid */
+            flex-grow: 1; /* Ocupa el espacio disponible */
+        }
+
+
+        #delegacionalChartContainer {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .card.delegacional-card {
+            border: 2px solid #18bc9c;
+            /* El tamaño se controlará en JS, pero el scale puede ser relativo */
+            transform: scale(0.95) !important; /* Ligeramente más grande que otras, si otras tienen scale */
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            margin: 0 auto;
+        }
+         .card.delegacional-card .card-title h3 {
+            font-size: 1.15em; /* Un poco más grande */
+            color: #18bc9c;
+        }
+        
+        #radarLegendContainer {
+            width: 280px; /* Ancho fijo para la leyenda */
+            flex-shrink: 0; /* Evita que se encoja */
+            background-color: #fdfdfd;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #e0e0e0;
+            align-self: flex-start; /* Para que no se estire verticalmente */
+            max-height: calc(100vh - 200px); /* Altura máxima, ajustar según necesidad */
+            overflow-y: auto; /* Scroll si el contenido es muy largo */
+        }
+        #radarLegendContainer h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+            text-align: center;
+        }
+        #radarLegendContainer ul {
+            list-style: none;
+            padding-left: 0;
+            font-family: "Montserrat", sans-serif;
+        }
+        #radarLegendContainer ul li {
+            font-size: 0.8em;
+            margin-bottom: 6px;
+            line-height: 1.4;
+            color: #333;
+        }
+
+
+/* ============== RESPONSIVE ============== */
+@media (max-width: 768px) {
+  body {
+    padding-top: 0;
+    font-size: 13px;
+  }
+  .encabezado,
+  .menu_bar {
+    position: relative;
+    height: auto;
+  }
+  .menu_bar {
+    top: 0;
+  }
+  .layout {
+    flex-direction: column;
+    min-height: auto;
+    margin-top: 0;
+  }
+  aside.sidebar {
+    position: relative;
+    top: auto;
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    margin: 0 0 15px 0;
+    border-right: none;
+  }
+  .main-content {
+    margin-left: 0;
+    padding: 15px;
+    min-height: auto;
+  }
+  .menu_bar ul {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
+    padding: 5px 10px;
+  }
+  .menu_bar ul li a {
+    padding: 5px 10px;
+  }
+  .encabezado {
+    padding: 10px;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .encabezado .titulo {
+    text-align: right;
+  }
+  .titulo h1 {
+    font-size: 1.1em;
+  }
+  .titulo h2 {
+    font-size: 0.8em;
+  }
+
+  nav.tabs,
+  nav.tabs-months {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .tab-title {
+    margin-bottom: 5px;
+  }
+  .tab-list {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 5px;
+  }
+  .tab-list li {
+    font-size: 0.8em;
+    padding: 5px 8px;
+  }
+
+  .main h2 {
+    font-size: 2em;
+  }
+  .main h3 {
+    font-size: 1.5em;
+  }
+
+  #detalleInfo {
+    width: 90%;
+    left: 5%;
+    right: 5%;
+    bottom: 10px;
+    top: auto;
+    font-size: 0.75em;
+    max-height: 40vh;
+    overflow-y: auto;
+    position: fixed;
+  }
+
+  /* .cards_grid para tabletas ya no necesita grid-template-columns: repeat(2, 1fr); 
+     porque el auto-fit se encargará. Se puede ajustar el gap si es necesario. */
+  .cards_grid {
+    /* grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));  DEJAREMOS QUE EL AUTO-FIT BASE FUNCIONE */
+    gap: 15px;
+  }
+  .card {
+    transform: scale(1);
+  }
+  .card:hover {
+    transform: translateY(-3px);
+  }
+  .chart-container-d3 {
+    min-height: 220px;
+  }
+}
+
+/* ============== COMPONENTES GENERALES Y COBERTURAS ============== */
+.container_page { padding: 20px 3%; }
+
+/* --- Selector de Modo de Visualización --- */
+.mode-selector-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center; 
+    margin-bottom: 20px;
+    padding: 8px 12px;
+    background-color: #f0f2f5;
+    border-radius: 6px;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.mode-selector-wrapper .main-label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95em;
+    margin-right: 10px;
+}
+.mode-selector-wrapper .mode-text {
+    font-size: 0.9em; 
+    color: #555;
+    cursor: default;
+    transition: font-weight 0.3s, color 0.3s;
+}
+.mode-selector-wrapper .mode-text.active-mode-label {
+    font-weight: bold;
+    color: #18bc9c;
+}
+
+/* --- Interruptor (Toggle Switch) Pequeño --- */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px; 
+    height: 20px; 
+    vertical-align: middle;
+    margin: 0 5px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: #18bc9c; }
+input:focus + .slider { box-shadow: 0 0 1px #18bc9c; }
+input:checked + .slider:before { transform: translateX(20px); }
+
+.hidden-filter { display: none !important; }
+
+/* --- Contenedor Maestro para Gráficos y Leyenda --- */
+#visualizationMasterContainer {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap; 
+    gap: 20px;
+    align-items: flex-start; /* Alinea la leyenda con el inicio de los gráficos */
+}
+#chartsArea {
+    flex-grow: 1;
+    min-width: 0; 
+}
+
+/* --- Cuadrícula de Tarjetas --- */
+.cards_grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* Tarjetas un poco más pequeñas para acomodar más */
+    gap: 10px; /* Espacio entre tarjetas */
+    align-items: start; /* Las tarjetas se alinean arriba */
+}
+
+.card { 
+    background: white; 
+    border-radius: 12px; 
+    padding: 10px; /* Padding reducido para tarjetas más pequeñas */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+    transition: transform 0.2s ease, box-shadow 0.2s ease; 
+    border: 1px solid #e0e0e0; 
+    position: relative; 
+    /* transform: scale(1);  Quitamos el scale por defecto de 0.83 */
+    /* width: 100%; Aseguramos que la tarjeta ocupe el espacio de la celda del grid */
+}
+.card:hover { 
+    transform: translateY(-4px); 
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+}
+
+.card.delegacional-card {
+    border: 2.5px solid #18bc9c !important;
+    /* Para que ocupe más espacio en la cuadrícula, se puede jugar con grid-column-end si la última fila tiene espacio */
+    /* O simplemente se verá más grande por su contenido (SVG más grande) */
+    /* Si la última fila tiene, por ejemplo, 3 columnas y es el último item: */
+    /* grid-column-start: span 2;  o grid-column: -3 / -1; (si es la última y quieres que ocupe 2 de 3 columnas) */
+    /* Esto es complejo de hacer genérico con auto-fit. La opción más simple es dejar que su tamaño mayor lo haga destacar. */
+    transform: scale(1) !important; /* Sin reducción de escala */
+    box-shadow: 0 6px 18px rgba(0,0,0,0.1) !important;
+    /* width se ajustará al contenido del SVG + padding */
+}
+.card.delegacional-card .card-title h3 {
+    font-size: 1.15em !important; 
+    color: #18bc9c !important;
+}
+.card.delegacional-card .promedio strong {
+    font-size: 1.35em !important;
+}
+
+.card-title { text-align: center; margin-bottom: 8px; font-size: 0.85em; } /* Ajustado */
+.card-title h3 { margin: 0 0 2px 0; font-weight: 600; }
+.card-title small { font-size: 0.8em; color: #666; } /* Ajustado */
+
+.promedio { text-align: center; margin-top: 10px; padding-top: 10px; padding-bottom: 8px; color: #75828F; font-size: 0.85em; line-height: 1.4; font-weight: bolder; border-top: 1px solid #e0e0e0; }
+.promedio strong { color: #18bc9c; font-size: 1.2em; font-weight: 700; margin-left: 5px; }
+
+/* --- Leyenda para el Modo "Por Grupo Demográfico" --- */
+#radarLegendContainer {
+    width: 250px; /* Ancho ligeramente reducido para la leyenda */
+    flex-shrink: 0; 
+    background-color: #ffffff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border: 1px solid #dcdcdc;
+    align-self: flex-start; 
+    max-height: calc(100vh - 250px); /* Ajusta según sea necesario */
+    overflow-y: auto;
+    display: none;
+}
+#radarLegendContainer h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1em; 
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 8px;
+    text-align: center;
+    font-weight: 600;
+    color: #333;
+}
+#radarLegendContainer ul { list-style: none; padding-left: 0; font-family: "Montserrat", sans-serif; }
+#radarLegendContainer ul li { font-size: 0.78em; margin-bottom: 6px; line-height: 1.45; color: #333; }
+
+
+/* (Resto de tu mystyle.css existente: #detalleInfo, TABS, .visualization-title-container, RESPONSIVE, etc.) */
+/* Asegúrate que las media queries no interfieran negativamente con los nuevos layouts. */
+/* Por ejemplo, para pantallas pequeñas, #visualizationMasterContainer podría volver a flex-direction: column */
+@media (max-width: 992px) { /* Un breakpoint intermedio antes de tablet */
+    #visualizationMasterContainer {
+        flex-direction: column;
+    }
+    #radarLegendContainer {
+        width: 100%; /* Ocupa todo el ancho */
+        margin-left: 0;
+        margin-top: 20px; /* Espacio si va debajo */
+        max-height: 300px; /* Ajustar altura para móvil */
+    }
+}
+
+@media (max-width: 768px) {
+  /* ... tus otros estilos responsive ... */
+  .cards_grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* Tarjetas aún más pequeñas en tablet */
+    gap: 10px;
+  }
+  .card {
+     transform: scale(1); /* Sin escalado en móvil/tablet por defecto para mejor uso del espacio */
+  }
+   .card:hover {
+     transform: translateY(-3px);
+  }
+
+}
+
+@media (max-width: 480px) {
+  /* ... tus otros estilos responsive ... */
+   .cards_grid {
+    grid-template-columns: 1fr; /* Una columna en móviles muy pequeños */
+  }
+  .mode-selector-wrapper {
+      flex-direction: column; /* Apila los elementos del selector de modo */
+      align-items: center;
+      gap: 5px;
+  }
+  .mode-selector-wrapper .main-label {
+      margin-right: 0;
+      margin-bottom: 5px;
+  }
+}
+
+        /* Estilos específicos para esta página, si los necesitas */
+        .leyenda-zonas { /* Ya tienes estilos para esto, asegúrate que se vean bien */
+            margin-top: 25px; /* Más espacio después del gráfico */
+        }
+        /* Asegurar que las nuevas listas de pestañas también sean scrollables si es necesario */
+        #yearTabsEndemicos.tab-list-scrollable,
+        #channelTypeTabs.tab-list-scrollable {
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            scrollbar-width: thin;
+            scrollbar-color: #18bc9c #34495e;
+        }
+        #yearTabsEndemicos.tab-list-scrollable::-webkit-scrollbar,
+        #channelTypeTabs.tab-list-scrollable::-webkit-scrollbar {
+            height: 6px;
+        }
+        #yearTabsEndemicos.tab-list-scrollable::-webkit-scrollbar-track,
+        #channelTypeTabs.tab-list-scrollable::-webkit-scrollbar-track {
+            background: #34495e;
+            border-radius: 3px;
+        }
+        #yearTabsEndemicos.tab-list-scrollable::-webkit-scrollbar-thumb,
+        #channelTypeTabs.tab-list-scrollable::-webkit-scrollbar-thumb {
+            background-color: #18bc9c;
+            border-radius: 3px;
+        }
+
+                .main-content-wrapper-canales {
+            display: flex;
+            gap: 20px; /* Espacio entre el área del gráfico y la barra lateral derecha */
+        }
+
+        .chart-area-canales {
+            flex-grow: 1; /* El área del gráfico ocupa el espacio disponible */
+            min-width: 0; /* Para que flex-grow funcione correctamente */
+        }
+
+        .sidebar-canales {
+            width: 280px; /* Ancho fijo para la barra lateral de opciones y descripción */
+            flex-shrink: 0; /* Evita que se encoja */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #chartTypeSelectorVertical {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        #chartTypeSelectorVertical h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+            color: #2c3e50;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        #chartTypeSelectorVertical ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #chartTypeSelectorVertical ul li {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background-color: #e9ecef;
+            color: #34495e;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            font-size: 0.85em;
+            text-align: center;
+        }
+
+        #chartTypeSelectorVertical ul li:hover {
+            background-color: #d5dbdb;
+        }
+
+        #chartTypeSelectorVertical ul li.active {
+            background-color: #18bc9c;
+            color: white;
+            font-weight: 600;
+        }
+
+        #chartDescriptionArea {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            color: #34495e;
+            min-height: 100px; /* Altura mínima para la descripción */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            line-height: 1.5;
+        }
+         .leyenda-zonas {
+            margin-top: 25px;
+        }
+/* Se eliminan las media queries específicas para .cards_grid de (min-width: 768px) y (min-width: 1200px)
+   ya que repeat(auto-fit, minmax(...)) manejará las columnas. */
+
+/* MEDIA QUERY PARA MÓVILES PEQUEÑOS (max-width: 480px) */
+@media (max-width: 480px) {
+  body {
+    font-size: 12px;
+  }
+  aside.sidebar {
+    max-height: 150px;
+    padding: 10px;
+  }
+  aside.sidebar h3 {
+    font-size: 1.143em;
+  }
+  .main h2 {
+    font-size: 1.8em;
+  }
+  .main h3 {
+    font-size: 1.3em;
+  }
+  .card {
+    padding: 10px;
+    transform: scale(1);
+  }
+  #detalleInfo {
+    font-size: 0.7em;
+    padding: 10px;
+  }
+  .tab-list li {
+    font-size: 0.75em;
+    padding: 4px 6px;
+  }
+  .tab-title {
+    font-size: 0.9em;
+  }
+
+  /* .cards_grid para móviles pequeños (auto-fit se encarga, podría ser 1 columna) */
+  .cards_grid {
+    /* grid-template-columns: 1fr; Ya cubierto por el auto-fit */
+    gap: 10px;
+  }
+  .chart-container-d3 {
+    min-height: 200px;
+  }
+}
+
+/* ESTILOS ADICIONALES (Canales Endémicos, Histórico, etc. se mantienen igual) */
+.leyenda-zonas {
+  display: flex;
+  gap: 15px;
+  margin: 20px auto;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 800px;
+}
+.zona-item {
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  font-size: 0.9em;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+.zona-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  display: inline-block;
+}
+.chart-header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+.chart-header h3 {
+  color: #2c3e50;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.chart-header p {
+  color: #7f8c8d;
+  font-size: 0.9em;
+}
+.historical-chart-container {
+  margin-top: 30px;
+  padding: 25px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  border: 1px solid #dee2e6;
+}
+.historical-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e9ecef;
+}
+#historicalChartTitle {
+  color: #2c3e50;
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 0;
+}
+#closeHistoricalChart {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+#closeHistoricalChart:hover {
+  background-color: #c82333;
+}
+.slider-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 25px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+.slider-controls button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+.slider-controls button:hover {
+  background-color: #0056b3;
+}
+.slider-controls button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+.slider-container {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  justify-content: center;
+}
+.slider-container label {
+  margin-right: 12px;
+  font-weight: 600;
+  color: #343a40;
+}
+#timeSlider {
+  width: 60%;
+  max-width: 350px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+#sliderValueLabel {
+  margin-left: 15px;
+  font-weight: bold;
+  color: #007bff;
+  min-width: 140px;
+  display: inline-block;
+  background-color: #fff;
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid #ced4da;
+  font-size: 0.9em;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.075);
+}
+.chart-container-d3#historicalChart {
+  min-height: 380px;
+}
+.chart-container-d3#productividadChart {
+  min-height: 500px;
+}
+.chart-footer {
+  text-align: center;
+  font-size: 0.8em;
+  color: #6c757d;
+  margin-top: 10px;
+}
+.section-catalog {
+  padding: 40px 0;
+  text-align: center;
+  background-color: #f0f2f5;
+  margin-top: 30px;
+}
+.section-catalog h2 {
+  font-size: 1.9em;
+  color: #2c3e50;
+  margin-bottom: 35px;
+}
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.catalog-card {
+  background-color: #fff;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  text-align: left;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e0e0e0;
+}
+.catalog-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+.catalog-card-thumbnail {
+  width: 100%;
+  height: 200px;
+  background-color: #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.catalog-card-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.catalog-card-content {
+  padding: 20px;
+  flex-grow: 1;
+}
+.catalog-card-content h4 {
+  font-size: 1.25em;
+  color: #34495e;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+.catalog-card-content p {
+  font-size: 0.9em;
+  line-height: 1.6;
+  color: #555;
+}
+/* MEJORAS PARA VISUALIZACIÓN DE COBERTURAS EN PANTALLAS < 993px */
+@media (max-width: 992px) {
+
+  /* 1. Hace el grid más flexible y centrado */
+  #cardsGrid {
+    display: grid;
+    /* Se reduce el tamaño mínimo para permitir que más tarjetas quepan cómodamente */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px; /* Un espacio consistente entre tarjetas */
+    justify-items: center; /* Centra las tarjetas en sus celdas de grid */
+    align-items: start;
+  }
+
+  /* 2. Regla específica para la tarjeta Delegacional */
+  #cardsGrid .card.delegacional-card {
+    /* Hace que la tarjeta delegacional ocupe todo el ancho del grid */
+    grid-column: 1 / -1; 
+    width: auto; /* Permite que se ajuste al contenedor */
+    max-width: 450px; /* Un ancho máximo para que no se vea excesivamente grande */
+    margin: 10px 0; /* Margen vertical para separarla de las otras tarjetas */
+  }
+
+  /* 3. Optimiza el espacio interno de TODAS las tarjetas */
+  .card {
+    padding: 10px; /* Un poco menos de padding para dar más espacio al gráfico */
+    width: 100%; /* Asegura que la tarjeta ocupe el espacio asignado por el grid */
+    max-width: 280px; /* Previene que las tarjetas se estiren demasiado en ciertas resoluciones */
+  }
+
+  /* 4. Mejora el espaciado de la leyenda */
+  #radarLegendContainer {
+    width: 100%; /* La leyenda ya ocupa todo el ancho, lo cual es correcto */
+    margin-top: 25px; /* Añade un espacio claro entre las tarjetas y la leyenda */
+  }
+}
+
+/* Ajustes adicionales para móviles muy pequeños */
+@media (max-width: 480px) {
+  #cardsGrid {
+    /* En la vista de una sola columna, no necesitamos un tamaño mínimo */
+    grid-template-columns: 1fr;
+  }
+  
+  .card {
+     max-width: 100%; /* Permite que la tarjeta ocupe el ancho completo */
+  }
+
+  #cardsGrid .card.delegacional-card {
+     max-width: 100%;
+  }
+
+  /* Coloca este código dentro de la media query @media (max-width: 992px) en tu archivo mystyle.css */
+
+/* --- Mejoras para la visualización y centrado de tarjetas en Coberturas --- */
+.cards_grid {
+    display: flex;           /* Cambiamos de grid a flexbox para facilitar el centrado */
+    flex-wrap: wrap;         /* Permite que las tarjetas se ajusten y pasen a la siguiente línea */
+    justify-content: center; /* Centra las tarjetas horizontalmente en el contenedor */
+    gap: 15px;               /* Un espacio consistente entre las tarjetas */
+}
+
+.card {
+    transform: scale(1);     /* Eliminamos la reducción de escala para que la tarjeta sea más grande y legible */
+    flex-shrink: 0;          /* Evita que las tarjetas flex se encojan si el espacio es reducido */
+}
+}
+
