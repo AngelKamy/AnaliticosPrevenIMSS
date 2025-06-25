@@ -25,19 +25,19 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedYearForChannel = null;
     let selectedChartType = 'canalSemanal';
     const monthAbbreviations = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-    
+
     // --- PALETA DE COLORES (Según tu última especificación) ---
     const COLORS = {
-        ZONA_EPIDEMIA: "#E53935",
-        ZONA_ALERTA: "#FDD835",
-        ZONA_EXITO: "#43A047",
-        MEDIANA_HISTORICA: "#9EADC8",
-        CASOS_ACTUALES: "#1E88E5",
+        ZONA_EPIDEMIA: "#E53935",       // Rojo sólido (Original)
+        ZONA_ALARMA: "#f39c12",         // Naranja sólido (NUEVO)
+        ZONA_ALERTA: "#FDD835",       // Amarillo sólido (Original, ahora es "Zona de seguridad")
+        ZONA_EXITO: "#43A047",        // Verde sólido (Original)
+        MEDIANA_HISTORICA: "rgba(155, 89, 182, 0.5)",  // Morado para la línea
+        CASOS_ACTUALES: "#1E88E5",    // Azul para la línea
         BARRAS_INCIDENCIA: "#1E88E5",
         BARRAS_TENDENCIA: "#64B5F6",
         LINEA_TENDENCIA: "#E53935"
     };
-    
     const margin = { top: 40, right: 30, bottom: 70, left: 60 };
     let svgWidth, svgHeight, width, height;
 
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!setChartDimensions()) return;
         populateDiseaseTabs();
         chartTypeSelectorVertical.querySelectorAll('ul li').forEach(item => {
-            item.addEventListener('click', function() {
+            item.addEventListener('click', function () {
                 chartTypeSelectorVertical.querySelector('.active')?.classList.remove('active');
                 this.classList.add('active');
                 selectedChartType = this.dataset.charttype;
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
             li.textContent = JSONende[key].nombreDisplay || key;
             li.dataset.disease = key;
             if (key === selectedDiseaseKey) li.classList.add('active');
-            li.addEventListener('click', function() {
+            li.addEventListener('click', function () {
                 diseaseTabsContainer.querySelector('.active')?.classList.remove('active');
                 this.classList.add('active');
                 selectedDiseaseKey = this.dataset.disease;
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
             li.textContent = year;
             li.dataset.year = year.toString();
             if (year.toString() === selectedYearForChannel) li.classList.add('active');
-            li.addEventListener('click', function() {
+            li.addEventListener('click', function () {
                 yearTabsContainer.querySelector('.active')?.classList.remove('active');
                 this.classList.add('active');
                 selectedYearForChannel = this.dataset.year;
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         drawChart();
     }
-    
+
     /**
      * Prepara el paquete de datos para la función de dibujo.
      * @returns {object|null}
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const numPeriods = isMonthly ? 12 : Math.max(0, ...historicalPeriodData.map(d => d.length), currentDataRaw.length);
                 if (numPeriods === 0) return null;
                 dataPackage.numPeriods = numPeriods;
-                
+
                 const padArray = (arr, len) => arr && arr.length < len ? [...arr, ...Array(len - arr.length).fill(null)] : (arr ? arr.slice(0, len) : Array(len).fill(null));
 
                 historicalPeriodData = historicalPeriodData.map(arr => padArray(arr, numPeriods));
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return dataPackage;
     }
-    
+
     /**
      * Orquestador principal que llama a la función de dibujo correcta.
      */
@@ -250,16 +250,29 @@ document.addEventListener('DOMContentLoaded', function () {
     function aggregateWeeklyToMonthly(weeklyData, year) {
         const weekToMonthMap = mapeosSemanasPorAno[year];
         if (!weekToMonthMap || !weeklyData) return null;
-        const monthlyCases = Array(12).fill(0);
+
+        // Inicializar el arreglo de meses con 'null'.
+        const monthlyCases = Array(12).fill(null);
+
         weeklyData.forEach((cases, index) => {
+            // Solo procesar si el valor de 'cases' es un número válido.
             if (cases !== null && !isNaN(cases)) {
+                // Obtener el mes correspondiente a la semana (de 1 a 12).
                 const month = weekToMonthMap[index + 1];
-                if (month) monthlyCases[month - 1] += cases;
+
+                // Si se encontró un mes válido.
+                if (month) {
+                    const monthIndex = month - 1; // Convertir a índice de arreglo (0 a 11).
+
+                    // Si el mes aún no tiene valor (es null), se trata como 0 antes de sumar.
+                    // Si ya tiene un valor, se le suma el nuevo valor.
+                    monthlyCases[monthIndex] = (monthlyCases[monthIndex] || 0) + cases;
+                }
             }
         });
+
         return monthlyCases;
     }
-
     function calculateMovingAverage(data, period = 4) {
         if (!data || data.length < period) return [];
         const movingAverage = Array(period - 1).fill(null);
@@ -276,12 +289,24 @@ document.addEventListener('DOMContentLoaded', function () {
      * @param {boolean} isWeekly
      */
     function drawCanalEndemicoBase(chartData, isWeekly) {
+        // Límite de visualización a 52 semanas para gráficos semanales
+        if (isWeekly) {
+            const displayPeriods = 52;
+            chartData.numPeriods = Math.min(chartData.numPeriods, displayPeriods);
+            chartData.current = chartData.current.slice(0, displayPeriods);
+            chartData.q1 = chartData.q1.slice(0, displayPeriods);
+            chartData.median = chartData.median.slice(0, displayPeriods);
+            chartData.q3 = chartData.q3.slice(0, displayPeriods);
+        }
+
         const svg = chartContainer.append("svg").attr("width", svgWidth).attr("height", svgHeight).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-        const maxCases = Math.max(d3.max(chartData.q3) || 0, d3.max(chartData.current) || 0, 10);
+
+        const maxCases = Math.max(d3.max(chartData.q3) || 0, d3.max(chartData.current.filter(d => d !== null)) || 0, 10);
+
         const xScale = d3.scaleLinear().domain([1, chartData.numPeriods]).range([0, width]);
-        const yScale = d3.scaleLinear().domain([0, maxCases * 1.1 || 10]).range([height, 0]).nice();
+        const yScale = d3.scaleLinear().domain([0, maxCases * 1.1]).range([height, 0]).nice();
         const periodLabel = isWeekly ? 'Semana' : 'Mes';
-        
+
         let xAxis;
         if (isWeekly) {
             xAxis = d3.axisBottom(xScale).ticks(width / 50).tickFormat(d3.format("d"));
@@ -290,34 +315,51 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         svg.append("g").attr("transform", `translate(0,${height})`).call(xAxis);
         svg.append("g").call(d3.axisLeft(yScale));
-        
-        const areaGenerator = (y0Field, y1Field) => d3.area().x((d, i) => xScale(i + 1)).y0(d => yScale(d[y0Field])).y1(d => yScale(d[y1Field])).defined(d => d[y0Field] != null && d[y1Field] != null);
-        const dataForAreas = d3.range(chartData.numPeriods).map(i => ({ q1: chartData.q1[i], q3: chartData.q3[i], max: maxCases * 1.1, min: 0 }));
 
+        // --- Nuevo bloque de código corregido ---
+        const areaGenerator = (y0Field, y1Field) => d3.area()
+            .x((d, i) => xScale(i + 1))
+            .y0(d => yScale(d[y0Field]))
+            .y1(d => yScale(d[y1Field]))
+            .defined(d => d[y0Field] != null && d[y1Field] != null);
+
+        // Ahora incluimos la mediana en los datos para las áreas
+        const dataForAreas = d3.range(chartData.numPeriods).map(i => ({
+            q1: chartData.q1[i],
+            median: chartData.median[i], // <-- AÑADIDO
+            q3: chartData.q3[i],
+            max: maxCases * 1.1,
+            min: 0
+        }));
+
+        // Dibujamos las 4 zonas de color
         svg.append("path").datum(dataForAreas).attr("fill", COLORS.ZONA_EXITO).attr("d", areaGenerator('min', 'q1'));
-        svg.append("path").datum(dataForAreas).attr("fill", COLORS.ZONA_ALERTA).attr("d", areaGenerator('q1', 'q3'));
+        svg.append("path").datum(dataForAreas).attr("fill", COLORS.ZONA_ALERTA).attr("d", areaGenerator('q1', 'median')); // Ahora va de Q1 a la Mediana
+        svg.append("path").datum(dataForAreas).attr("fill", COLORS.ZONA_ALARMA).attr("d", areaGenerator('median', 'q3')); // NUEVA ZONA: de Mediana a Q3
         svg.append("path").datum(dataForAreas).attr("fill", COLORS.ZONA_EPIDEMIA).attr("d", areaGenerator('q3', 'max'));
 
-        const lineGenerator = d3.line().x((d, i) => xScale(i + 1)).y(d => yScale(d)).defined(d => d != null);
+        const lineGenerator = d3.line()
+            .x((d, i) => xScale(i + 1))
+            .y(d => yScale(d))
+            .defined(d => d != null);
+
         svg.append("path").datum(chartData.median).attr("fill", "none").attr("stroke", COLORS.MEDIANA_HISTORICA).attr("stroke-width", 2).attr("stroke-dasharray", "4 4").attr("d", lineGenerator);
         svg.append("path").datum(chartData.current).attr("fill", "none").attr("stroke", COLORS.CASOS_ACTUALES).attr("stroke-width", 3).attr("d", lineGenerator);
 
         svg.selectAll(".current-case-point").data(chartData.current).enter().filter(d => d != null)
             .append("circle").attr("class", "current-case-point").attr("cx", (d, i) => xScale(i + 1)).attr("cy", d => yScale(d))
             .attr("r", 3.5).attr("fill", COLORS.CASOS_ACTUALES).attr("stroke", "white").attr("stroke-width", 1);
-        
+
+        // --- LÓGICA DE ETIQUETADO INTELIGENTE (ANTI-COLISIÓN) ---
         const pointsToLabel = [];
-        const lastValidIndex = chartData.current.findLastIndex(v => v !== null);
         chartData.current.forEach((d, i) => {
-            if (d === null) return;
-            const prev = chartData.current[i - 1];
-            const next = chartData.current[i + 1];
-            const isPeak = (prev === null || d > prev) && (next === null || d > next);
-            const isValley = (d !== 0) && (prev === null || d < prev) && (next === null || d < next);
-            if (i === 0 || i === lastValidIndex || isPeak || isValley) {
+            if (d !== null) {
                 pointsToLabel.push({ value: d, index: i });
             }
         });
+
+        const renderedLabels = [];
+        const labelPadding = { x: 2, y: 4 };
 
         svg.selectAll(".current-case-label").data(pointsToLabel).enter()
             .append("text")
@@ -325,14 +367,35 @@ document.addEventListener('DOMContentLoaded', function () {
             .attr("x", d => xScale(d.index + 1))
             .attr("y", d => yScale(d.value) < 20 ? yScale(d.value) + 16 : yScale(d.value) - 8)
             .attr("text-anchor", "middle").style("font-size", "9px").style("font-weight", "600").style("fill", "#34495e")
-            .text(d => d.value.toFixed(0));
+            .text(d => d.value.toFixed(0))
+            .style("opacity", 0)
+            .each(function () {
+                const currentLabel = this;
+                const currentBBox = currentLabel.getBBox();
+
+                let hasOverlap = false;
+                for (const renderedBBox of renderedLabels) {
+                    const overlapX = Math.max(0, Math.min(currentBBox.x + currentBBox.width + labelPadding.x, renderedBBox.x + renderedBBox.width + labelPadding.x) - Math.max(currentBBox.x - labelPadding.x, renderedBBox.x - labelPadding.x));
+                    const overlapY = Math.max(0, Math.min(currentBBox.y + currentBBox.height + labelPadding.y, renderedBBox.y + renderedBBox.height + labelPadding.y) - Math.max(currentBBox.y - labelPadding.y, renderedBBox.y - labelPadding.y));
+
+                    if (overlapX > 0 && overlapY > 0) {
+                        hasOverlap = true;
+                        break;
+                    }
+                }
+
+                if (!hasOverlap) {
+                    d3.select(currentLabel).style("opacity", 1);
+                    renderedLabels.push(currentBBox);
+                }
+            });
 
         const focus = svg.append("g").style("display", "none");
         focus.append("circle").attr("r", 5).attr("fill", COLORS.CASOS_ACTUALES).attr("stroke", "white");
         svg.append("rect").attr("width", width).attr("height", height).style("fill", "none").style("pointer-events", "all")
             .on("mouseover", () => { focus.style("display", null); tooltipElement.style("opacity", 0.95); })
             .on("mouseout", () => { focus.style("display", "none"); tooltipElement.style("opacity", 0); })
-            .on("mousemove", function(event) {
+            .on("mousemove", function (event) {
                 const x0 = xScale.invert(d3.pointer(event, this)[0]);
                 const i = Math.round(x0) - 1;
                 if (i < 0 || i >= chartData.numPeriods || chartData.current[i] == null) {
@@ -342,23 +405,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 const val = chartData.current[i];
                 const displayPeriod = isWeekly ? i + 1 : monthAbbreviations[i];
                 focus.attr("transform", `translate(${xScale(i + 1)},${yScale(val)})`);
-                tooltipElement.html(`<strong>${periodLabel} ${displayPeriod} (${chartData.year})</strong><br/>Casos: ${val.toFixed(0)}<br/><span style="color:${COLORS.ZONA_EXITO};">Q1: ${chartData.q1[i]?.toFixed(1)||"N/A"}</span><br/><span style="color:${COLORS.MEDIANA_HISTORICA};">Med: ${chartData.median[i]?.toFixed(1)||"N/A"}</span><br/><span style="color:${COLORS.ZONA_EPIDEMIA};">Q3: ${chartData.q3[i]?.toFixed(1)||"N/A"}</span>`);
+
+                tooltipElement.html(`<strong>${periodLabel} ${displayPeriod} (${chartData.year})</strong><br/>Casos: <span style="color: #F9E79F; font-weight: bold;">${val.toFixed(0)}</span><br/><span style="color: #FFFFFF;">Q1: ${chartData.q1[i]?.toFixed(1) || "N/A"}</span><br/><span style="color: #FFFFFF;">Med: ${chartData.median[i]?.toFixed(1) || "N/A"}</span><br/><span style="color: #FFFFFF;">Q3: ${chartData.q3[i]?.toFixed(1) || "N/A"}</span>`);
+
                 tooltipElement.style("left", (event.pageX + 15) + "px").style("top", (event.pageY - 28) + "px");
             });
     }
-
     /**
      * Dibuja gráficos de incidencia como barras.
      * @param {object} chartData
      * @param {boolean} isWeekly
      */
     function drawIncidencia(chartData, isWeekly) {
+        // --- NUEVO: Límite de visualización a 52 semanas ---
+        if (isWeekly) {
+            const displayPeriods = 52;
+            chartData.numPeriods = Math.min(chartData.numPeriods, displayPeriods);
+            chartData.current = chartData.current.slice(0, displayPeriods);
+        }
+
         const svg = chartContainer.append("svg").attr("width", svgWidth).attr("height", svgHeight).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
         const maxCases = d3.max(chartData.current) || 10;
         const xDomain = d3.range(1, (chartData.numPeriods || 0) + 1);
         const xScale = d3.scaleBand().domain(xDomain).range([0, width]).padding(0.2);
         const yScale = d3.scaleLinear().domain([0, maxCases * 1.1]).range([height, 0]).nice();
-        
+
         let xAxis;
         if (isWeekly) {
             xAxis = d3.axisBottom(xScale).tickValues(xScale.domain().filter(d => d % 4 === 1 || d === 1));
@@ -367,31 +438,30 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         svg.append("g").attr("transform", `translate(0,${height})`).call(xAxis);
         svg.append("g").call(d3.axisLeft(yScale));
-        
+
         const barData = chartData.current.map((val, idx) => ({ period: idx + 1, value: val || 0 }));
         svg.selectAll(".bar").data(barData).enter().append("rect")
             .attr("class", "bar").attr("x", d => xScale(d.period)).attr("y", d => yScale(d.value))
             .attr("width", xScale.bandwidth()).attr("height", d => height - yScale(d.value)).attr("fill", COLORS.BARRAS_INCIDENCIA);
-        
+
         svg.selectAll(".bar-label").data(barData).enter()
             .filter(d => d.value > 0 && height - yScale(d.value) > 10)
             .append("text").attr("class", "bar-label").attr("x", d => xScale(d.period) + xScale.bandwidth() / 2)
             .attr("y", d => yScale(d.value) < 15 ? yScale(d.value) + 14 : yScale(d.value) - 5)
             .attr("text-anchor", "middle").style("font-size", "9px")
             .style("fill", d => yScale(d.value) < 15 ? "white" : "#34495e").text(d => d.value);
-            
+
         const movingAverageData = calculateMovingAverage(chartData.current, 4);
-        if(movingAverageData.length > 0) {
+        if (movingAverageData.length > 0) {
             const trendLine = d3.line()
                 .x((d, i) => xScale(i + 1) + xScale.bandwidth() / 2)
                 .y(d => yScale(d))
                 .defined(d => d !== null);
-            
+
             svg.append("path").datum(movingAverageData).attr("fill", "none")
-               .attr("stroke", COLORS.LINEA_TENDENCIA).attr("stroke-width", 2).attr("stroke-dasharray", "6, 4").attr("d", trendLine);
+                .attr("stroke", COLORS.LINEA_TENDENCIA).attr("stroke-width", 2).attr("stroke-dasharray", "6, 4").attr("d", trendLine);
         }
     }
-
     /**
      * Dibuja el gráfico de tendencia anual como barras.
      * @param {object} chartData
@@ -401,10 +471,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const maxTotal = d3.max(chartData.annualTotals, d => d.total) || 10;
         const xScale = d3.scaleBand().domain(chartData.annualTotals.map(d => d.year)).range([0, width]).padding(0.3);
         const yScale = d3.scaleLinear().domain([0, maxTotal * 1.1]).range([height, 0]).nice();
-        
+
         svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
         svg.append("g").call(d3.axisLeft(yScale));
-        
+
         svg.selectAll(".bar-anual").data(chartData.annualTotals)
             .enter().append("rect").attr("class", "bar-anual").attr("x", d => xScale(d.year))
             .attr("y", d => yScale(d.total)).attr("width", xScale.bandwidth())
@@ -415,17 +485,17 @@ document.addEventListener('DOMContentLoaded', function () {
             .attr("y", d => yScale(d.total) < 20 ? yScale(d.total) + 15 : yScale(d.total) - 5)
             .attr("text-anchor", "middle").style("font-size", "10px")
             .style("fill", d => yScale(d.total) < 20 ? "white" : "#34495e").text(d => d.total);
-            
+
         const annualTotals = chartData.annualTotals.map(d => d.total);
         const movingAverageData = calculateMovingAverage(annualTotals, 4);
-        if(movingAverageData.length > 0) {
+        if (movingAverageData.length > 0) {
             const trendLine = d3.line()
                 .x((d, i) => xScale(chartData.annualTotals[i].year) + xScale.bandwidth() / 2)
                 .y(d => yScale(d))
                 .defined(d => d !== null);
 
             svg.append("path").datum(movingAverageData).attr("fill", "none")
-               .attr("stroke", COLORS.LINEA_TENDENCIA).attr("stroke-width", 2).attr("stroke-dasharray", "6, 4").attr("d", trendLine);
+                .attr("stroke", COLORS.LINEA_TENDENCIA).attr("stroke-width", 2).attr("stroke-dasharray", "6, 4").attr("d", trendLine);
         }
     }
 

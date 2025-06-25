@@ -242,17 +242,12 @@ aside.sidebar::-webkit-scrollbar-thumb {
   margin-top: 10px;
 }
 
-/* --- REVERTIDO A AUTO-FIT PARA CARDS_GRID --- */
-.cards_grid {
-  display: grid;
-  /* Las tarjetas tienen un width de 280px (desde JS) + padding de 15px*2 = 310px.
-     minmax(300px, 1fr) podría ser un buen punto de partida.
-     O, si el 'transform: scale(0.83)' está activo para las cards de cobertura,
-     el tamaño visual es más pequeño (~257px), entonces minmax(250px, 1fr) sería apropiado.
-     Por ahora, usaré un valor intermedio, puedes ajustarlo según el tamaño visual final de tus .card */
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 0px;
-  margin-top: 10px;
+/* --- Cuadrícula de Tarjetas --- */
+.cards_grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+    gap: 15px; /* Un espacio consistente entre tarjetas */
+    justify-items: center; /* Centra las tarjetas en su celda (muy útil) */
 }
 
 .card {
@@ -719,116 +714,6 @@ nav.tabs-months {
         }
 
 
-/* ============== RESPONSIVE ============== */
-@media (max-width: 768px) {
-  body {
-    padding-top: 0;
-    font-size: 13px;
-  }
-  .encabezado,
-  .menu_bar {
-    position: relative;
-    height: auto;
-  }
-  .menu_bar {
-    top: 0;
-  }
-  .layout {
-    flex-direction: column;
-    min-height: auto;
-    margin-top: 0;
-  }
-  aside.sidebar {
-    position: relative;
-    top: auto;
-    width: 100%;
-    height: auto;
-    max-height: 200px;
-    margin: 0 0 15px 0;
-    border-right: none;
-  }
-  .main-content {
-    margin-left: 0;
-    padding: 15px;
-    min-height: auto;
-  }
-  .menu_bar ul {
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: flex-start;
-    padding: 5px 10px;
-  }
-  .menu_bar ul li a {
-    padding: 5px 10px;
-  }
-  .encabezado {
-    padding: 10px;
-    flex-direction: row;
-    justify-content: space-between;
-  }
-  .encabezado .titulo {
-    text-align: right;
-  }
-  .titulo h1 {
-    font-size: 1.1em;
-  }
-  .titulo h2 {
-    font-size: 0.8em;
-  }
-
-  nav.tabs,
-  nav.tabs-months {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .tab-title {
-    margin-bottom: 5px;
-  }
-  .tab-list {
-    width: 100%;
-    overflow-x: auto;
-    padding-bottom: 5px;
-  }
-  .tab-list li {
-    font-size: 0.8em;
-    padding: 5px 8px;
-  }
-
-  .main h2 {
-    font-size: 2em;
-  }
-  .main h3 {
-    font-size: 1.5em;
-  }
-
-  #detalleInfo {
-    width: 90%;
-    left: 5%;
-    right: 5%;
-    bottom: 10px;
-    top: auto;
-    font-size: 0.75em;
-    max-height: 40vh;
-    overflow-y: auto;
-    position: fixed;
-  }
-
-  /* .cards_grid para tabletas ya no necesita grid-template-columns: repeat(2, 1fr); 
-     porque el auto-fit se encargará. Se puede ajustar el gap si es necesario. */
-  .cards_grid {
-    /* grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));  DEJAREMOS QUE EL AUTO-FIT BASE FUNCIONE */
-    gap: 15px;
-  }
-  .card {
-    transform: scale(1);
-  }
-  .card:hover {
-    transform: translateY(-3px);
-  }
-  .chart-container-d3 {
-    min-height: 220px;
-  }
-}
 
 /* ============== COMPONENTES GENERALES Y COBERTURAS ============== */
 .container_page { padding: 20px 3%; }
@@ -971,51 +856,6 @@ input:checked + .slider:before { transform: translateX(20px); }
 #radarLegendContainer ul li { font-size: 0.78em; margin-bottom: 6px; line-height: 1.45; color: #333; }
 
 
-/* (Resto de tu mystyle.css existente: #detalleInfo, TABS, .visualization-title-container, RESPONSIVE, etc.) */
-/* Asegúrate que las media queries no interfieran negativamente con los nuevos layouts. */
-/* Por ejemplo, para pantallas pequeñas, #visualizationMasterContainer podría volver a flex-direction: column */
-@media (max-width: 992px) { /* Un breakpoint intermedio antes de tablet */
-    #visualizationMasterContainer {
-        flex-direction: column;
-    }
-    #radarLegendContainer {
-        width: 100%; /* Ocupa todo el ancho */
-        margin-left: 0;
-        margin-top: 20px; /* Espacio si va debajo */
-        max-height: 300px; /* Ajustar altura para móvil */
-    }
-}
-
-@media (max-width: 768px) {
-  /* ... tus otros estilos responsive ... */
-  .cards_grid {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* Tarjetas aún más pequeñas en tablet */
-    gap: 10px;
-  }
-  .card {
-     transform: scale(1); /* Sin escalado en móvil/tablet por defecto para mejor uso del espacio */
-  }
-   .card:hover {
-     transform: translateY(-3px);
-  }
-
-}
-
-@media (max-width: 480px) {
-  /* ... tus otros estilos responsive ... */
-   .cards_grid {
-    grid-template-columns: 1fr; /* Una columna en móviles muy pequeños */
-  }
-  .mode-selector-wrapper {
-      flex-direction: column; /* Apila los elementos del selector de modo */
-      align-items: center;
-      gap: 5px;
-  }
-  .mode-selector-wrapper .main-label {
-      margin-right: 0;
-      margin-bottom: 5px;
-  }
-}
 
         /* Estilos específicos para esta página, si los necesitas */
         .leyenda-zonas { /* Ya tienes estilos para esto, asegúrate que se vean bien */
@@ -1121,52 +961,7 @@ input:checked + .slider:before { transform: translateX(20px); }
          .leyenda-zonas {
             margin-top: 25px;
         }
-/* Se eliminan las media queries específicas para .cards_grid de (min-width: 768px) y (min-width: 1200px)
-   ya que repeat(auto-fit, minmax(...)) manejará las columnas. */
 
-/* MEDIA QUERY PARA MÓVILES PEQUEÑOS (max-width: 480px) */
-@media (max-width: 480px) {
-  body {
-    font-size: 12px;
-  }
-  aside.sidebar {
-    max-height: 150px;
-    padding: 10px;
-  }
-  aside.sidebar h3 {
-    font-size: 1.143em;
-  }
-  .main h2 {
-    font-size: 1.8em;
-  }
-  .main h3 {
-    font-size: 1.3em;
-  }
-  .card {
-    padding: 10px;
-    transform: scale(1);
-  }
-  #detalleInfo {
-    font-size: 0.7em;
-    padding: 10px;
-  }
-  .tab-list li {
-    font-size: 0.75em;
-    padding: 4px 6px;
-  }
-  .tab-title {
-    font-size: 0.9em;
-  }
-
-  /* .cards_grid para móviles pequeños (auto-fit se encarga, podría ser 1 columna) */
-  .cards_grid {
-    /* grid-template-columns: 1fr; Ya cubierto por el auto-fit */
-    gap: 10px;
-  }
-  .chart-container-d3 {
-    min-height: 200px;
-  }
-}
 
 /* ESTILOS ADICIONALES (Canales Endémicos, Histórico, etc. se mantienen igual) */
 .leyenda-zonas {
@@ -1380,70 +1175,173 @@ input:checked + .slider:before { transform: translateX(20px); }
   line-height: 1.6;
   color: #555;
 }
-/* MEJORAS PARA VISUALIZACIÓN DE COBERTURAS EN PANTALLAS < 993px */
+
+/* ============== RESPONSIVE ============== */
+
+/* Para Tablets y pantallas medianas */
 @media (max-width: 992px) {
-
-  /* 1. Hace el grid más flexible y centrado */
-  #cardsGrid {
-    display: grid;
-    /* Se reduce el tamaño mínimo para permitir que más tarjetas quepan cómodamente */
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px; /* Un espacio consistente entre tarjetas */
-    justify-items: center; /* Centra las tarjetas en sus celdas de grid */
-    align-items: start;
-  }
-
-  /* 2. Regla específica para la tarjeta Delegacional */
-  #cardsGrid .card.delegacional-card {
-    /* Hace que la tarjeta delegacional ocupe todo el ancho del grid */
-    grid-column: 1 / -1; 
-    width: auto; /* Permite que se ajuste al contenedor */
-    max-width: 450px; /* Un ancho máximo para que no se vea excesivamente grande */
-    margin: 10px 0; /* Margen vertical para separarla de las otras tarjetas */
-  }
-
-  /* 3. Optimiza el espacio interno de TODAS las tarjetas */
-  .card {
-    padding: 10px; /* Un poco menos de padding para dar más espacio al gráfico */
-    width: 100%; /* Asegura que la tarjeta ocupe el espacio asignado por el grid */
-    max-width: 280px; /* Previene que las tarjetas se estiren demasiado en ciertas resoluciones */
-  }
-
-  /* 4. Mejora el espaciado de la leyenda */
-  #radarLegendContainer {
-    width: 100%; /* La leyenda ya ocupa todo el ancho, lo cual es correcto */
-    margin-top: 25px; /* Añade un espacio claro entre las tarjetas y la leyenda */
-  }
+    #visualizationMasterContainer {
+        flex-direction: column;
+    }
+    #radarLegendContainer {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 20px;
+        max-height: 300px;
+    }
+    #cardsGrid .card.delegacional-card {
+        grid-column: 1 / -1; 
+        max-width: 450px;
+        margin: 10px 0;
+    }
 }
 
-/* Ajustes adicionales para móviles muy pequeños */
+/* Para Tablets más pequeñas y móviles grandes */
+@media (max-width: 768px) {
+    body {
+        padding-top: 0;
+        font-size: 13px;
+    }
+    .encabezado,
+    .menu_bar {
+        position: relative;
+        height: auto;
+    }
+    .menu_bar {
+        top: 0;
+    }
+    .layout {
+        flex-direction: column;
+        min-height: auto;
+        margin-top: 0;
+    }
+    aside.sidebar {
+        position: relative;
+        top: auto;
+        width: 100%;
+        height: auto;
+        max-height: 200px;
+        margin: 0 0 15px 0;
+        border-right: none;
+    }
+    .main-content {
+        margin-left: 0;
+        padding: 15px;
+        min-height: auto;
+    }
+    .menu_bar ul {
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-start;
+        padding: 5px 10px;
+    }
+    .menu_bar ul li a {
+        padding: 5px 10px;
+    }
+    .encabezado {
+        padding: 10px;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    .encabezado .titulo {
+        text-align: right;
+    }
+    .titulo h1 {
+        font-size: 1.1em;
+    }
+    .titulo h2 {
+        font-size: 0.8em;
+    }
+    nav.tabs,
+    nav.tabs-months {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .tab-title {
+        margin-bottom: 5px;
+    }
+    .tab-list {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 5px;
+    }
+    .tab-list li {
+        font-size: 0.8em;
+        padding: 5px 8px;
+    }
+    .main h2 {
+        font-size: 2em;
+    }
+    .main h3 {
+        font-size: 1.5em;
+    }
+    #detalleInfo {
+        width: 90%;
+        left: 5%;
+        right: 5%;
+        bottom: 10px;
+        top: auto;
+        font-size: 0.75em;
+        max-height: 40vh;
+        overflow-y: auto;
+        position: fixed;
+    }
+    .card {
+        transform: scale(1);
+    }
+    .card:hover {
+        transform: translateY(-3px);
+    }
+    .chart-container-d3 {
+        min-height: 220px;
+    }
+}
+
+/* Para móviles pequeños */
 @media (max-width: 480px) {
-  #cardsGrid {
-    /* En la vista de una sola columna, no necesitamos un tamaño mínimo */
-    grid-template-columns: 1fr;
-  }
-  
-  .card {
-     max-width: 100%; /* Permite que la tarjeta ocupe el ancho completo */
-  }
-
-  #cardsGrid .card.delegacional-card {
-     max-width: 100%;
-  }
-
-  /* Coloca este código dentro de la media query @media (max-width: 992px) en tu archivo mystyle.css */
-
-/* --- Mejoras para la visualización y centrado de tarjetas en Coberturas --- */
-.cards_grid {
-    display: flex;           /* Cambiamos de grid a flexbox para facilitar el centrado */
-    flex-wrap: wrap;         /* Permite que las tarjetas se ajusten y pasen a la siguiente línea */
-    justify-content: center; /* Centra las tarjetas horizontalmente en el contenedor */
-    gap: 15px;               /* Un espacio consistente entre las tarjetas */
+    body {
+        font-size: 12px;
+    }
+    .cards_grid {
+        /* En móviles pequeños, forzamos a una sola columna */
+        grid-template-columns: 1fr;
+    }
+    .card {
+        max-width: 100%;
+    }
+    #cardsGrid .card.delegacional-card {
+        max-width: 100%;
+    }
+    .mode-selector-wrapper {
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+    .mode-selector-wrapper .main-label {
+        margin-right: 0;
+        margin-bottom: 5px;
+    }
 }
+/* Para Tablets y pantallas medianas */
+@media (max-width: 992px) {
+    /* Forzamos la cuadrícula a tener siempre 3 columnas en este tamaño */
+    .cards_grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
 
-.card {
-    transform: scale(1);     /* Eliminamos la reducción de escala para que la tarjeta sea más grande y legible */
-    flex-shrink: 0;          /* Evita que las tarjetas flex se encojan si el espacio es reducido */
+    #visualizationMasterContainer {
+        flex-direction: column;
+    }
+    #radarLegendContainer {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 20px;
+        max-height: 300px;
+    }
+    #cardsGrid .card.delegacional-card {
+        /* La tarjeta delegacional seguirá ocupando todo el ancho */
+        grid-column: 1 / -1; 
+        max-width: 450px;
+        margin: 10px 0;
+    }
 }
-}
-
