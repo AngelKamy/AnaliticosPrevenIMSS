@@ -182,6 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function dibujarBarras(datos, config, idx) {
+        svg.selectAll(".bar").interrupt();
         const bars = svg.selectAll(".bar").data(datos, d => d.unidad);
 
         bars.exit()
@@ -234,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!config || !config.backgroundColors || config.umbralSuperior === undefined || config.umbralInferior === undefined) {
             return "#007bff";
         }
-        if (idx === 0 && config.valorMinimoRojo !== undefined) {
+        if ((idx === 0 || idx === 25) && config.valorMinimoRojo !== undefined) {
             if (valor <= config.valorMinimoRojo || valor > config.umbralSuperior) return config.backgroundColors[0];
             if (valor > config.valorMinimoRojo && valor < config.umbralInferior) return config.backgroundColors[2];
             return config.backgroundColors[1];
