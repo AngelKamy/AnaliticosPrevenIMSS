@@ -3451,9 +3451,8 @@ export const configuracionIndicadores = {
                 backgroundColors: ['rgba(40, 180, 99)', 'rgba(253, 250, 53)', 'rgba(246, 25, 21)']
 
             },
-            25: {//CTE 02 - Productividad de Atención Integral por personal de Enfermería Especialista en Medicina de Familia
-                umbralSuperior: 20,
-                umbralInferior: 14,
+                        25: {//CTE 02 - Productividad de Atención Integral por personal de Enfermería Especialista en Medicina de Familia
+                umbralSuperior: 20, umbralInferior: 14,
                 colorSuperior: 'rgb(255, 99, 132)',
                 colorInferior: 'black',
                 backgroundColors: ['rgba(246, 25, 21)', 'rgba(40, 180, 99)', 'rgba(253, 250, 53)'],
