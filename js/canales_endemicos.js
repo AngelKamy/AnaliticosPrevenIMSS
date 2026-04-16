@@ -1,9 +1,6 @@
 /**
  * @file canales_endemicos.js
- * @description Lógica para visualización de canales endémicos por unidad médica.
- * @version 9.0 (Modificado para selección de unidad)
- * @requires d3.v7.min.js
- * @requires JSONende.js (con nueva estructura anidada por unidad)
+ * @description Lógica para visualización de canales endémicos usando D3.js con Ejes Etiquetados, Descarga 16:9 inferior derecha y animaciones.
  */
 
 import { JSONende, mapeosSemanasPorAno } from './JSONende.js';
@@ -11,7 +8,7 @@ import { JSONende, mapeosSemanasPorAno } from './JSONende.js';
 document.addEventListener('DOMContentLoaded', function () {
     // --- ELEMENTOS DEL DOM ---
     const diseaseTabsContainer = document.getElementById('diseaseTabs');
-    const unitTabsContainer = document.getElementById('unitTabsCanales'); // NUEVO: Selector para pestañas de unidad
+    const unitTabsContainer = document.getElementById('unitTabsCanales'); 
     const yearTabsContainer = document.getElementById('yearTabsEndemicos');
     const chartTypeSelectorVertical = document.getElementById('chartTypeSelectorVertical');
     const chartDescriptionArea = document.getElementById('chartDescriptionArea');
@@ -20,14 +17,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const chartSubtitleElement = document.getElementById('chartSubtitleEndemicos');
     const chartContainer = d3.select("#graficoCanalesEndemicos");
     const tooltipElement = d3.select("#tooltipCanales");
+    const statsContainer = document.getElementById('statsCanales'); 
 
     // --- ESTADO Y CONFIGURACIÓN ---
     let selectedDiseaseKey = null;
-    let selectedUnitKey = null; // NUEVO: Variable de estado para la unidad
+    let selectedUnitKey = null; 
     let selectedYearForChannel = null;
     let selectedChartType = 'canalSemanal';
     const monthAbbreviations = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
+    // Colores originales
     const COLORS = {
         ZONA_EPIDEMIA: "#E53935",
         ZONA_ALARMA: "#f39c12",
@@ -39,6 +38,14 @@ document.addEventListener('DOMContentLoaded', function () {
         BARRAS_TENDENCIA: "#64B5F6",
         LINEA_TENDENCIA: "#E53935"
     };
+
+    const ZONAS = {
+        exito:    { label: 'Éxito',      css: 'color:#43A047' },
+        alerta:   { label: 'Seguridad',  css: 'color:#FDD835' },
+        alarma:   { label: 'Alarma',     css: 'color:#f39c12' },
+        epidemia: { label: 'Epidemia',   css: 'color:#E53935' },
+    };
+
     const margin = { top: 40, right: 30, bottom: 70, left: 60 };
     let svgWidth, svgHeight, width, height;
 
@@ -60,7 +67,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 selectedChartType = this.dataset.charttype;
                 updateChartDescription();
                 yearTabsNav.style.display = selectedChartType === 'tendenciaAnual' ? 'none' : 'flex';
-                // La selección de tipo de gráfico ahora llama a populateYearTabs para re-evaluar los años disponibles.
                 populateYearTabs();
             });
         });
@@ -82,6 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
         chartDescriptionArea.textContent = chartDescriptions[selectedChartType] || "Seleccione un tipo de gráfica.";
     }
 
+    // --- LÓGICA DE TABS ---
     function populateDiseaseTabs() {
         const diseaseKeys = Object.keys(JSONende);
         if (diseaseKeys.length === 0) return;
@@ -97,19 +104,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 diseaseTabsContainer.querySelector('.active')?.classList.remove('active');
                 this.classList.add('active');
                 selectedDiseaseKey = this.dataset.disease;
-                // Al cambiar de enfermedad, recargamos las unidades.
                 populateUnitTabs();
             });
             diseaseTabsContainer.appendChild(li);
         });
-        populateUnitTabs(); // Carga inicial de unidades para la primera enfermedad.
+        populateUnitTabs(); 
     }
     
-    // --- FUNCIÓN NUEVA: Para poblar las pestañas de unidades ---
     function populateUnitTabs() {
         unitTabsContainer.innerHTML = '';
         if (!selectedDiseaseKey || !JSONende[selectedDiseaseKey]?.unidades) {
             chartContainer.html('<p class="no-data-message">No hay unidades para esta enfermedad.</p>');
+            limpiarStats();
             return;
         }
 
@@ -121,10 +127,10 @@ document.addEventListener('DOMContentLoaded', function () {
         
         if (unitKeys.length === 0) {
              chartContainer.html('<p class="no-data-message">No hay datos de unidades para esta enfermedad.</p>');
+             limpiarStats();
              return;
         }
 
-        // Si no hay unidad seleccionada o la anterior no existe en la nueva lista, selecciona la primera.
         if (!selectedUnitKey || !unitKeys.includes(selectedUnitKey)) {
             selectedUnitKey = unitKeys[0];
         }
@@ -138,19 +144,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 unitTabsContainer.querySelector('.active')?.classList.remove('active');
                 this.classList.add('active');
                 selectedUnitKey = this.dataset.unit;
-                // Al cambiar de unidad, recargamos los años.
                 populateYearTabs();
             });
             unitTabsContainer.appendChild(li);
         });
-        populateYearTabs(); // Carga inicial de años para la primera unidad.
+        populateYearTabs();
     }
 
     function populateYearTabs() {
         yearTabsContainer.innerHTML = '';
-        // MODIFICADO: Verifica la ruta completa hasta 'datosSemanales'
         if (!selectedDiseaseKey || !selectedUnitKey || !JSONende[selectedDiseaseKey]?.unidades?.[selectedUnitKey]?.datosSemanales) {
             chartContainer.html('<p class="no-data-message">Datos no disponibles para la unidad seleccionada.</p>');
+            limpiarStats();
             return;
         }
 
@@ -160,7 +165,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (selectedChartType === 'canalSemanal' || selectedChartType === 'canalMensual') {
             yearsToDisplay = allYearsWithData.filter(year => {
                 for (let i = 1; i <= 7; i++) {
-                    // MODIFICADO: Verifica la existencia de años históricos en la ruta correcta
                     if (!JSONende[selectedDiseaseKey].unidades[selectedUnitKey].datosSemanales[(year - i).toString()]) return false;
                 }
                 return true;
@@ -170,6 +174,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (yearsToDisplay.length === 0) {
             const msg = `No hay años con suficientes datos históricos (7 años previos) para generar canales en ${selectedUnitKey}.`;
             chartContainer.html(`<p class="no-data-message">${msg}</p>`);
+            limpiarStats();
             selectedYearForChannel = null;
             return;
         }
@@ -195,13 +200,65 @@ document.addEventListener('DOMContentLoaded', function () {
         drawChart();
     }
     
-    // --- FUNCIÓN MODIFICADA: para usar la nueva estructura de datos ---
+    // --- FUNCIONES DE STATS CARDS ---
+    function zonaActual(val, q1, median, q3) {
+        if (val === null || val === undefined) return null;
+        if (val <= q1)     return 'exito';
+        if (val <= median) return 'alerta';
+        if (val <= q3)     return 'alarma';
+        return 'epidemia';
+    }
+
+    function renderStats(current, q1arr, medianarr, q3arr, type) {
+        if (!statsContainer) return;
+
+        if (type !== 'canalSemanal' && type !== 'canalMensual') {
+            limpiarStats();
+            return;
+        }
+
+        const valid = current.filter(v => v !== null);
+        const total = valid.reduce((s, v) => s + v, 0);
+        const semActual = valid.length;
+        const ultimoVal = valid.at(-1) ?? 0;
+        
+        const zona = zonaActual(ultimoVal, q1arr[semActual - 1], medianarr[semActual - 1], q3arr[semActual - 1]);
+        const zonaInfo = ZONAS[zona] || { label: '—', css: '' };
+        
+        const etiquetaPeriodo = type === 'canalMensual' ? 'Mes actual' : 'Semana actual';
+        const etiquetaCasos = type === 'canalMensual' ? 'Casos último mes' : 'Casos última semana';
+
+        statsContainer.innerHTML = `
+            <div class="stat-canal">
+                <div class="stat-canal-label">Total de casos</div>
+                <div class="stat-canal-value">${total}</div>
+            </div>
+            <div class="stat-canal">
+                <div class="stat-canal-label">${etiquetaPeriodo}</div>
+                <div class="stat-canal-value">${semActual}</div>
+            </div>
+            <div class="stat-canal">
+                <div class="stat-canal-label">${etiquetaCasos}</div>
+                <div class="stat-canal-value" style="${zonaInfo.css}">${ultimoVal}</div>
+            </div>
+            <div class="stat-canal">
+                <div class="stat-canal-label">Nivel de Riesgo</div>
+                <div class="stat-canal-value" style="${zonaInfo.css}">${zonaInfo.label}</div>
+            </div>
+        `;
+    }
+
+    function limpiarStats() {
+        if (statsContainer) statsContainer.innerHTML = '';
+    }
+
+    // --- PROCESAMIENTO DE DATOS ---
     function processDataForChart() {
         if (!selectedDiseaseKey || !selectedUnitKey || !JSONende[selectedDiseaseKey]?.unidades?.[selectedUnitKey]?.datosSemanales) return null;
         if (selectedChartType !== 'tendenciaAnual' && !selectedYearForChannel) return null;
 
         const disease = JSONende[selectedDiseaseKey];
-        const unitData = disease.unidades[selectedUnitKey]; // Obtenemos los datos de la unidad seleccionada
+        const unitData = disease.unidades[selectedUnitKey]; 
         const allWeeklyData = unitData.datosSemanales;
         const currentYear = parseInt(selectedYearForChannel);
         let dataPackage = { diseaseName: disease.nombreDisplay, unitName: selectedUnitKey, year: selectedYearForChannel, type: selectedChartType, current: [] };
@@ -248,32 +305,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return dataPackage;
     }
 
-    function drawChart() {
-        chartContainer.html('');
-        if (!setChartDimensions()) return;
-        const chartData = processDataForChart();
-
-        if (!chartData || (chartData.type !== 'tendenciaAnual' && (!chartData.current || chartData.current.length === 0)) || (chartData.type === 'tendenciaAnual' && (!chartData.annualTotals || chartData.annualTotals.length === 0))) {
-            chartContainer.html('<p class="no-data-message">No hay datos disponibles para la selección actual.</p>');
-            return;
-        }
-        
-        // MODIFICADO: Título más descriptivo
-        chartTitleElement.textContent = `${chartData.diseaseName} en ${chartData.unitName} (${chartData.year || 'Tendencia'})`;
-        chartSubtitleElement.textContent = chartDescriptions[selectedChartType];
-
-        switch (selectedChartType) {
-            case 'canalSemanal': drawCanalEndemicoBase(chartData, true); break;
-            case 'canalMensual': drawCanalEndemicoBase(chartData, false); break;
-            case 'incidenciaSemanal': drawIncidencia(chartData, true); break;
-            case 'incidenciaMensual': drawIncidencia(chartData, false); break;
-            case 'tendenciaAnual': drawTendenciaAnual(chartData); break;
-        }
-    }
-
-    // --- El resto de las funciones (aggregateWeeklyToMonthly, calculateMovingAverage, drawCanalEndemicoBase, drawIncidencia, drawTendenciaAnual) permanecen idénticas a tu versión anterior. ---
-    
-    // (Pega aquí el resto de tus funciones de dibujo sin modificarlas)
     function aggregateWeeklyToMonthly(weeklyData, year) {
         const weekToMonthMap = mapeosSemanasPorAno[year];
         if (!weekToMonthMap || !weeklyData) return null;
@@ -299,7 +330,37 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return movingAverage;
     }
+
+    function drawChart() {
+        chartContainer.html('');
+        if (!setChartDimensions()) return;
+        const chartData = processDataForChart();
+
+        if (!chartData || (chartData.type !== 'tendenciaAnual' && (!chartData.current || chartData.current.length === 0)) || (chartData.type === 'tendenciaAnual' && (!chartData.annualTotals || chartData.annualTotals.length === 0))) {
+            chartContainer.html('<p class="no-data-message">No hay datos disponibles para la selección actual.</p>');
+            limpiarStats();
+            return;
+        }
+        
+        chartTitleElement.textContent = `${chartData.diseaseName} en ${chartData.unitName} (${chartData.year || 'Tendencia'})`;
+        chartSubtitleElement.textContent = chartDescriptions[selectedChartType];
+
+        if (selectedChartType === 'canalSemanal' || selectedChartType === 'canalMensual') {
+            renderStats(chartData.current, chartData.q1, chartData.median, chartData.q3, selectedChartType);
+        } else {
+            limpiarStats();
+        }
+
+        switch (selectedChartType) {
+            case 'canalSemanal': drawCanalEndemicoBase(chartData, true); break;
+            case 'canalMensual': drawCanalEndemicoBase(chartData, false); break;
+            case 'incidenciaSemanal': drawIncidencia(chartData, true); break;
+            case 'incidenciaMensual': drawIncidencia(chartData, false); break;
+            case 'tendenciaAnual': drawTendenciaAnual(chartData); break;
+        }
+    }
     
+    // --- DIBUJO CON ANIMACIONES, EJE RESPONSIVO Y ETIQUETAS ---
     function drawCanalEndemicoBase(chartData, isWeekly) {
         if (isWeekly) {
             const displayPeriods = 52;
@@ -318,12 +379,55 @@ document.addEventListener('DOMContentLoaded', function () {
 
         let xAxis;
         if (isWeekly) {
-            xAxis = d3.axisBottom(xScale).ticks(width / 50).tickFormat(d3.format("d"));
+            let step = 1;
+            if (width < 480) step = 4;
+            else if (width < 768) step = 2;
+
+            xAxis = d3.axisBottom(xScale)
+                      .tickValues(d3.range(1, chartData.numPeriods + 1, step))
+                      .tickFormat(d3.format("d"));
         } else {
-            xAxis = d3.axisBottom(xScale).ticks(12).tickFormat(d => monthAbbreviations[d - 1]);
+            xAxis = d3.axisBottom(xScale)
+                      .tickValues(d3.range(1, 13))
+                      .tickFormat(d => monthAbbreviations[d - 1]);
         }
-        svg.append("g").attr("transform", `translate(0,${height})`).call(xAxis);
+        
+        const xAxisGroup = svg.append("g")
+            .attr("class", "eje-x")
+            .attr("transform", `translate(0,${height})`)
+            .call(xAxis);
+
+        if (isWeekly && width >= 480) {
+            xAxisGroup.selectAll("text")
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", "rotate(-45)");
+        }
+
         svg.append("g").call(d3.axisLeft(yScale));
+
+        // -- ETIQUETAS DE LOS EJES --
+        svg.append("text")
+            .attr("class", "eje-label")
+            .attr("text-anchor", "middle")
+            .attr("x", width / 2)
+            .attr("y", height + 50)
+            .style("font-size", "12px")
+            .style("font-weight", "600")
+            .style("fill", "#7a8a9a")
+            .text(isWeekly ? "Semana Epidemiológica" : "Meses");
+
+        svg.append("text")
+            .attr("class", "eje-label")
+            .attr("text-anchor", "middle")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -40)
+            .attr("x", -height / 2)
+            .style("font-size", "12px")
+            .style("font-weight", "600")
+            .style("fill", "#7a8a9a")
+            .text("Número de Casos");
 
         const areaGenerator = (y0Field, y1Field) => d3.area()
             .x((d, i) => xScale(i + 1))
@@ -339,59 +443,62 @@ document.addEventListener('DOMContentLoaded', function () {
             min: 0
         }));
 
-        svg.append("path").datum(dataForAreas).attr("fill", COLORS.ZONA_EXITO).attr("d", areaGenerator('min', 'q1'));
-        svg.append("path").datum(dataForAreas).attr("fill", COLORS.ZONA_ALERTA).attr("d", areaGenerator('q1', 'median'));
-        svg.append("path").datum(dataForAreas).attr("fill", COLORS.ZONA_ALARMA).attr("d", areaGenerator('median', 'q3'));
-        svg.append("path").datum(dataForAreas).attr("fill", COLORS.ZONA_EPIDEMIA).attr("d", areaGenerator('q3', 'max'));
+        const drawArea = (field0, field1, color) => {
+            svg.append("path")
+               .datum(dataForAreas)
+               .attr("fill", color)
+               .attr("d", areaGenerator(field0, field1))
+               .style("opacity", 0)
+               .transition()
+               .duration(800)
+               .ease(d3.easeCubicOut)
+               .style("opacity", 1);
+        };
+
+        drawArea('min', 'q1', COLORS.ZONA_EXITO);
+        drawArea('q1', 'median', COLORS.ZONA_ALERTA);
+        drawArea('median', 'q3', COLORS.ZONA_ALARMA);
+        drawArea('q3', 'max', COLORS.ZONA_EPIDEMIA);
 
         const lineGenerator = d3.line()
             .x((d, i) => xScale(i + 1))
             .y(d => yScale(d))
             .defined(d => d != null);
 
-        svg.append("path").datum(chartData.median).attr("fill", "none").attr("stroke", COLORS.MEDIANA_HISTORICA).attr("stroke-width", 2).attr("stroke-dasharray", "4 4").attr("d", lineGenerator);
-        svg.append("path").datum(chartData.current).attr("fill", "none").attr("stroke", COLORS.CASOS_ACTUALES).attr("stroke-width", 3).attr("d", lineGenerator);
+        const animateLine = (data, color, strokeWidth, dash = null) => {
+            const path = svg.append("path")
+                .datum(data)
+                .attr("fill", "none")
+                .attr("stroke", color)
+                .attr("stroke-width", strokeWidth)
+                .attr("d", lineGenerator);
+                
+            if (dash) path.attr("stroke-dasharray", dash);
+
+            const totalLength = path.node().getTotalLength();
+            path.attr("stroke-dasharray", totalLength + " " + totalLength)
+                .attr("stroke-dashoffset", totalLength)
+                .transition()
+                .duration(1200)
+                .ease(d3.easeCubicOut)
+                .attr("stroke-dashoffset", 0)
+                .on("end", () => {
+                    if(dash) path.attr("stroke-dasharray", dash);
+                });
+        };
+
+        animateLine(chartData.median, COLORS.MEDIANA_HISTORICA, 2, "4 4");
+        animateLine(chartData.current, COLORS.CASOS_ACTUALES, 3);
 
         svg.selectAll(".current-case-point").data(chartData.current).enter().filter(d => d != null)
             .append("circle").attr("class", "current-case-point").attr("cx", (d, i) => xScale(i + 1)).attr("cy", d => yScale(d))
-            .attr("r", 3.5).attr("fill", COLORS.CASOS_ACTUALES).attr("stroke", "white").attr("stroke-width", 1);
-        
-        const pointsToLabel = [];
-        chartData.current.forEach((d, i) => {
-            if (d !== null) {
-                pointsToLabel.push({ value: d, index: i });
-            }
-        });
-
-        const renderedLabels = [];
-        const labelPadding = { x: 2, y: 4 };
-
-        svg.selectAll(".current-case-label").data(pointsToLabel).enter()
-            .append("text")
-            .attr("class", "current-case-label")
-            .attr("x", d => xScale(d.index + 1))
-            .attr("y", d => yScale(d.value) < 20 ? yScale(d.value) + 16 : yScale(d.value) - 8)
-            .attr("text-anchor", "middle").style("font-size", "9px").style("font-weight", "600").style("fill", "#34495e")
-            .text(d => d.value.toFixed(0))
+            .attr("r", 3.5).attr("fill", COLORS.CASOS_ACTUALES).attr("stroke", "white").attr("stroke-width", 1)
             .style("opacity", 0)
-            .each(function () {
-                const currentLabel = this;
-                const currentBBox = currentLabel.getBBox();
-                let hasOverlap = false;
-                for (const renderedBBox of renderedLabels) {
-                    const overlapX = Math.max(0, Math.min(currentBBox.x + currentBBox.width + labelPadding.x, renderedBBox.x + renderedBBox.width + labelPadding.x) - Math.max(currentBBox.x - labelPadding.x, renderedBBox.x - labelPadding.x));
-                    const overlapY = Math.max(0, Math.min(currentBBox.y + currentBBox.height + labelPadding.y, renderedBBox.y + renderedBBox.height + labelPadding.y) - Math.max(currentBBox.y - labelPadding.y, renderedBBox.y - labelPadding.y));
-                    if (overlapX > 0 && overlapY > 0) {
-                        hasOverlap = true;
-                        break;
-                    }
-                }
-                if (!hasOverlap) {
-                    d3.select(currentLabel).style("opacity", 1);
-                    renderedLabels.push(currentBBox);
-                }
-            });
-
+            .transition()
+            .delay((d, i) => i * (1000 / chartData.numPeriods)) 
+            .duration(300)
+            .style("opacity", 1);
+        
         const focus = svg.append("g").style("display", "none");
         focus.append("circle").attr("r", 5).attr("fill", COLORS.CASOS_ACTUALES).attr("stroke", "white");
         svg.append("rect").attr("width", width).attr("height", height).style("fill", "none").style("pointer-events", "all")
@@ -427,24 +534,78 @@ document.addEventListener('DOMContentLoaded', function () {
 
         let xAxis;
         if (isWeekly) {
-            xAxis = d3.axisBottom(xScale).tickValues(xScale.domain().filter(d => d % 4 === 1 || d === 1));
+            let step = 1;
+            if (width < 480) step = 4;
+            else if (width < 768) step = 2;
+
+            let tickVals = xScale.domain();
+            if (step > 1) {
+                tickVals = tickVals.filter(d => d % step === 1 || d === 1);
+            }
+            xAxis = d3.axisBottom(xScale).tickValues(tickVals);
         } else {
             xAxis = d3.axisBottom(xScale).tickFormat(d => monthAbbreviations[d - 1]);
         }
-        svg.append("g").attr("transform", `translate(0,${height})`).call(xAxis);
+        
+        const xAxisGroup = svg.append("g")
+            .attr("class", "eje-x")
+            .attr("transform", `translate(0,${height})`)
+            .call(xAxis);
+
+        if (isWeekly && width >= 480) {
+            xAxisGroup.selectAll("text")
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", "rotate(-45)");
+        }
+
         svg.append("g").call(d3.axisLeft(yScale));
 
+        // -- ETIQUETAS DE LOS EJES --
+        svg.append("text")
+            .attr("class", "eje-label")
+            .attr("text-anchor", "middle")
+            .attr("x", width / 2)
+            .attr("y", height + 50)
+            .style("font-size", "12px")
+            .style("font-weight", "600")
+            .style("fill", "#7a8a9a")
+            .text(isWeekly ? "Semana Epidemiológica" : "Meses");
+
+        svg.append("text")
+            .attr("class", "eje-label")
+            .attr("text-anchor", "middle")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -40)
+            .attr("x", -height / 2)
+            .style("font-size", "12px")
+            .style("font-weight", "600")
+            .style("fill", "#7a8a9a")
+            .text("Número de Casos");
+
         const barData = chartData.current.map((val, idx) => ({ period: idx + 1, value: val || 0 }));
+        
         svg.selectAll(".bar").data(barData).enter().append("rect")
-            .attr("class", "bar").attr("x", d => xScale(d.period)).attr("y", d => yScale(d.value))
-            .attr("width", xScale.bandwidth()).attr("height", d => height - yScale(d.value)).attr("fill", COLORS.BARRAS_INCIDENCIA);
+            .attr("class", "bar").attr("x", d => xScale(d.period)).attr("y", height) 
+            .attr("width", xScale.bandwidth()).attr("height", 0) 
+            .attr("fill", COLORS.BARRAS_INCIDENCIA)
+            .transition()
+            .duration(800)
+            .ease(d3.easeCubicOut)
+            .attr("y", d => yScale(d.value))
+            .attr("height", d => height - yScale(d.value));
 
         svg.selectAll(".bar-label").data(barData).enter()
             .filter(d => d.value > 0 && height - yScale(d.value) > 10)
             .append("text").attr("class", "bar-label").attr("x", d => xScale(d.period) + xScale.bandwidth() / 2)
-            .attr("y", d => yScale(d.value) < 15 ? yScale(d.value) + 14 : yScale(d.value) - 5)
+            .attr("y", height) 
             .attr("text-anchor", "middle").style("font-size", "9px")
-            .style("fill", d => yScale(d.value) < 15 ? "white" : "#34495e").text(d => d.value);
+            .style("fill", d => yScale(d.value) < 15 ? "white" : "#34495e").text(d => d.value)
+            .transition()
+            .duration(800)
+            .ease(d3.easeCubicOut)
+            .attr("y", d => yScale(d.value) < 15 ? yScale(d.value) + 14 : yScale(d.value) - 5);
 
         const movingAverageData = calculateMovingAverage(chartData.current, 4);
         if (movingAverageData.length > 0) {
@@ -452,8 +613,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 .x((d, i) => xScale(i + 1) + xScale.bandwidth() / 2)
                 .y(d => yScale(d))
                 .defined(d => d !== null);
-            svg.append("path").datum(movingAverageData).attr("fill", "none")
+            
+            const path = svg.append("path").datum(movingAverageData).attr("fill", "none")
                 .attr("stroke", COLORS.LINEA_TENDENCIA).attr("stroke-width", 2).attr("stroke-dasharray", "6, 4").attr("d", trendLine);
+            
+            const totalLength = path.node().getTotalLength();
+            path.attr("stroke-dasharray", totalLength + " " + totalLength)
+                .attr("stroke-dashoffset", totalLength)
+                .transition()
+                .duration(1200)
+                .ease(d3.easeCubicOut)
+                .attr("stroke-dashoffset", 0)
+                .on("end", () => path.attr("stroke-dasharray", "6, 4"));
         }
     }
     
@@ -463,19 +634,59 @@ document.addEventListener('DOMContentLoaded', function () {
         const xScale = d3.scaleBand().domain(chartData.annualTotals.map(d => d.year)).range([0, width]).padding(0.3);
         const yScale = d3.scaleLinear().domain([0, maxTotal * 1.1]).range([height, 0]).nice();
 
-        svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
+        const xAxisGroup = svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
+        
+        if (chartData.annualTotals.length > 8) {
+            xAxisGroup.selectAll("text")
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", "rotate(-45)");
+        }
+
         svg.append("g").call(d3.axisLeft(yScale));
+
+        // -- ETIQUETAS DE LOS EJES --
+        svg.append("text")
+            .attr("class", "eje-label")
+            .attr("text-anchor", "middle")
+            .attr("x", width / 2)
+            .attr("y", height + 50)
+            .style("font-size", "12px")
+            .style("font-weight", "600")
+            .style("fill", "#7a8a9a")
+            .text("Años");
+
+        svg.append("text")
+            .attr("class", "eje-label")
+            .attr("text-anchor", "middle")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -40)
+            .attr("x", -height / 2)
+            .style("font-size", "12px")
+            .style("font-weight", "600")
+            .style("fill", "#7a8a9a")
+            .text("Número de Casos Totales");
 
         svg.selectAll(".bar-anual").data(chartData.annualTotals)
             .enter().append("rect").attr("class", "bar-anual").attr("x", d => xScale(d.year))
-            .attr("y", d => yScale(d.total)).attr("width", xScale.bandwidth())
-            .attr("height", d => height - yScale(d.total)).attr("fill", COLORS.BARRAS_TENDENCIA);
+            .attr("y", height).attr("width", xScale.bandwidth())
+            .attr("height", 0).attr("fill", COLORS.BARRAS_TENDENCIA)
+            .transition()
+            .duration(800)
+            .ease(d3.easeCubicOut)
+            .attr("y", d => yScale(d.total))
+            .attr("height", d => height - yScale(d.total));
 
         svg.selectAll(".bar-anual-label").data(chartData.annualTotals).enter().filter(d => d.total > 0)
             .append("text").attr("class", "bar-anual-label").attr("x", d => xScale(d.year) + xScale.bandwidth() / 2)
-            .attr("y", d => yScale(d.total) < 20 ? yScale(d.total) + 15 : yScale(d.total) - 5)
+            .attr("y", height)
             .attr("text-anchor", "middle").style("font-size", "10px")
-            .style("fill", d => yScale(d.total) < 20 ? "white" : "#34495e").text(d => d.total);
+            .style("fill", d => yScale(d.total) < 20 ? "white" : "#34495e").text(d => d.total)
+            .transition()
+            .duration(800)
+            .ease(d3.easeCubicOut)
+            .attr("y", d => yScale(d.total) < 20 ? yScale(d.total) + 15 : yScale(d.total) - 5);
 
         const annualTotals = chartData.annualTotals.map(d => d.total);
         const movingAverageData = calculateMovingAverage(annualTotals, 4);
@@ -484,11 +695,101 @@ document.addEventListener('DOMContentLoaded', function () {
                 .x((d, i) => xScale(chartData.annualTotals[i].year) + xScale.bandwidth() / 2)
                 .y(d => yScale(d))
                 .defined(d => d !== null);
-            svg.append("path").datum(movingAverageData).attr("fill", "none")
-                .attr("stroke", COLORS.LINEA_TENDENCIA).attr("stroke-width", 2).attr("stroke-dasharray", "6, 4").attr("d", trendLine);
+            
+            const path = svg.append("path").datum(movingAverageData).attr("fill", "none")
+                .attr("stroke", COLORS.LINEA_TENDENCIA).attr("stroke-width", 2).attr("d", trendLine);
+            
+            const totalLength = path.node().getTotalLength();
+            path.attr("stroke-dasharray", totalLength + " " + totalLength)
+                .attr("stroke-dashoffset", totalLength)
+                .transition()
+                .duration(1200)
+                .ease(d3.easeCubicOut)
+                .attr("stroke-dashoffset", 0)
+                .on("end", () => path.attr("stroke-dasharray", "6, 4"));
         }
     }
 
-    // --- INICIAR LA APLICACIÓN ---
+    // --- FUNCIÓN PARA EXPORTAR A PNG 16:9 ---
+    function descargarGrafica16x9() {
+        const originalSvg = document.querySelector("#graficoCanalesEndemicos svg");
+        if (!originalSvg) {
+            alert("No hay gráfica renderizada para descargar.");
+            return;
+        }
+
+        const exportWidth = 1280;
+        const exportHeight = 720;
+        const cornerRadius = 30; 
+
+        const svgClone = originalSvg.cloneNode(true);
+        svgClone.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
+        svgClone.setAttribute("width", exportWidth);
+        svgClone.setAttribute("height", exportHeight);
+        svgClone.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+        // Estilos integrados para asegurar que las etiquetas de ejes se exporten bien
+        const style = document.createElement("style");
+        style.textContent = `
+            text { font-family: 'Montserrat', sans-serif; }
+            .eje-x text, .tick text { font-size: 14px; fill: #2c3e50; }
+            .eje-label { font-size: 14px; font-weight: 600; fill: #7a8a9a; }
+            path.domain { stroke: #bdc3c7; }
+        `;
+        svgClone.insertBefore(style, svgClone.firstChild);
+
+        const serializer = new XMLSerializer();
+        let svgString = serializer.serializeToString(svgClone);
+        if (!svgString.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+            svgString = svgString.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+
+        const img = new Image();
+        const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = function () {
+            const canvas = document.createElement("canvas");
+            canvas.width = exportWidth;
+            canvas.height = exportHeight;
+            const ctx = canvas.getContext("2d");
+
+            ctx.beginPath();
+            ctx.moveTo(cornerRadius, 0);
+            ctx.lineTo(exportWidth - cornerRadius, 0);
+            ctx.quadraticCurveTo(exportWidth, 0, exportWidth, cornerRadius);
+            ctx.lineTo(exportWidth, exportHeight - cornerRadius);
+            ctx.quadraticCurveTo(exportWidth, exportHeight, exportWidth - cornerRadius, exportHeight);
+            ctx.lineTo(cornerRadius, exportHeight);
+            ctx.quadraticCurveTo(0, exportHeight, 0, exportHeight - cornerRadius);
+            ctx.lineTo(0, cornerRadius);
+            ctx.quadraticCurveTo(0, 0, cornerRadius, 0);
+            ctx.closePath();
+            
+            ctx.clip(); 
+            ctx.drawImage(img, 0, 0, exportWidth, exportHeight);
+            URL.revokeObjectURL(url);
+
+            const pngUrl = canvas.toDataURL("image/png");
+            const downloadLink = document.createElement("a");
+            downloadLink.href = pngUrl;
+            
+            const name = selectedDiseaseKey || "Canal_Endemico";
+            const unit = selectedUnitKey ? `_${selectedUnitKey.replace(/\s+/g, '')}` : "";
+            downloadLink.download = `Grafica_${name}${unit}_16x9.png`;
+            
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        };
+
+        img.src = url;
+    }
+
+    const btnDescargar = document.getElementById('btnDescargarGrafica');
+    if(btnDescargar) {
+        btnDescargar.addEventListener('click', descargarGrafica16x9);
+    }
+
     init();
 });

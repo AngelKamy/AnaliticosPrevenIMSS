@@ -853,7 +853,7 @@ input:checked + .slider:before { transform: translateX(20px); }
     color: #333;
 }
 #radarLegendContainer ul { list-style: none; padding-left: 0; font-family: "Montserrat", sans-serif; }
-#radarLegendContainer ul li { font-size: 0.78em; margin-bottom: 6px; line-height: 1.45; color: #333; }
+#radarLegendContainer ul { font-size: 0.78em; margin-bottom: 6px; line-height: 1.45; color: #333; }
 
 
 
@@ -1344,4 +1344,88 @@ input:checked + .slider:before { transform: translateX(20px); }
         max-width: 450px;
         margin: 10px 0;
     }
+}
+
+/* ========================================================================= */
+/* ============== SECCIÓN NUEVA EXCLUSIVA: CANALES ENDÉMICOS =============== */
+/* ========================================================================= */
+
+/* --- STATS CARDS CANALES --- */
+.stats-canales-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 0 10px;
+}
+.stat-canal {
+  background-color: #ffffff; 
+  border-radius: 8px; 
+  padding: 12px 16px;
+  border: 1px solid #e0e4e8; 
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  border-left: 4px solid #18bc9c; 
+  transition: transform 0.2s ease;
+}
+.stat-canal:hover { transform: translateY(-2px); }
+.stat-canal-label { 
+  font-size: 0.8em; 
+  color: #7a8a9a; 
+  margin-bottom: 6px; 
+  font-weight: 600; 
+  text-transform: uppercase; 
+}
+.stat-canal-value { 
+  font-size: 1.6em; 
+  font-weight: 700; 
+  color: #2c3e50; 
+  line-height: 1.2; 
+}
+
+/* --- BOTÓN DE DESCARGA Y SU CONTENEDOR --- */
+.chart-footer-actions {
+  display: flex;
+  justify-content: flex-end; /* Alinea el botón a la derecha */
+  width: 100%;
+  padding-right: 15px;
+  margin-top: 5px;
+  margin-bottom: 15px;
+}
+
+.btn-descarga-img {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #2c3e50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.btn-descarga-img:hover {
+  background-color: #18bc9c;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* --- RESPONSIVE EXCLUSIVO PARA CANALES ENDÉMICOS --- */
+@media (max-width: 992px) {
+  .stats-canales-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .main-content-wrapper-canales { flex-direction: column; }
+  .sidebar-canales { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .stats-canales-row { grid-template-columns: 1fr; }
+  .chart-footer-actions { justify-content: center; } /* En móviles centramos el botón para mejor tap */
 }
