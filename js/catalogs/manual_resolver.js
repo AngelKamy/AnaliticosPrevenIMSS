@@ -118,9 +118,9 @@ export function resolveConfig(year, month, idx) {
   //  - mayor_es_mejor: [VERDE alto, AMARILLO medio, ROJO bajo]
   //  - menor_es_mejor: [ROJO alto, AMARILLO medio, VERDE bajo]
   //  - intervalo_optimo: [ROJO alto, VERDE medio, ROJO bajo]
-  const VERDE    = "rgba(40, 180, 99, 0.9)";
-  const AMARILLO = "rgba(253, 220, 53, 0.95)";
-  const ROJO     = "rgba(231, 76, 60, 0.9)";
+const VERDE    = "rgba(52, 168, 83, 1)";
+const AMARILLO = "rgba(251, 188, 5, 1)";
+const ROJO     = "rgba(234, 67, 53, 1)";
 
   const tipo = rangos.tipo || "mayor_es_mejor";
   let backgroundColors, etiquetaAlto, etiquetaMedio, etiquetaBajo;

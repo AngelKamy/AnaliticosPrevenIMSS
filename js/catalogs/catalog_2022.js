@@ -237,7 +237,7 @@ export const CATALOG_2022 = {
     {
       clave: "Tamiz Neonatal",
       nombre: "Cobertura de detección de Tamiz Neonatal (SIAIS)",
-      activo: true,
+      activo: false, // reserva: ya no se requiere reportar (acuerdo OOAD Hidalgo Nov 2025)
       decimales: 2,
       rangos: { tipo: "mayor_es_mejor", default: r(95, 90) }
     },
