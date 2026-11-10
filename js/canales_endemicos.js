@@ -50,8 +50,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let svgWidth, svgHeight, width, height;
 
     const chartDescriptions = {
-        canalSemanal: "Muestra el comportamiento de los casos semanales del año seleccionado en comparación con el canal endémico histórico (Q1, Mediana, Q3) construido con los 7 años previos.",
-        canalMensual: "Similar al canal semanal, pero con datos agregados y calculados mensualmente. Permite observar tendencias a mediano plazo.",
+        canalSemanal: "Compara los casos semanales del año seleccionado contra los cuartiles históricos (Q1, Mediana y Q3), calculados con hasta 7 años previos disponibles.",
+        canalMensual: "Canal histórico con datos agregados por mes, calculado con hasta 7 años previos disponibles. Permite observar tendencias a mediano plazo.",
         incidenciaSemanal: "Presenta el número de casos reportados cada semana para el año seleccionado. Incluye una línea de tendencia de media móvil de 4 períodos.",
         incidenciaMensual: "Muestra el total de casos reportados cada mes para el año seleccionado. Incluye una línea de tendencia de media móvil de 4 períodos.",
         tendenciaAnual: "Gráfico de barras que compara el total de casos anuales para la enfermedad seleccionada. Incluye una línea de tendencia de media móvil de 4 períodos."
@@ -104,6 +104,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 diseaseTabsContainer.querySelector('.active')?.classList.remove('active');
                 this.classList.add('active');
                 selectedDiseaseKey = this.dataset.disease;
+                // Priorizar Delegacional al cambiar de padecimiento; las unidades disponibles pueden variar.
+                selectedUnitKey = null;
+                selectedYearForChannel = null;
                 populateUnitTabs();
             });
             diseaseTabsContainer.appendChild(li);
@@ -163,16 +166,19 @@ document.addEventListener('DOMContentLoaded', function () {
         let yearsToDisplay = [...allYearsWithData].sort((a, b) => b - a);
 
         if (selectedChartType === 'canalSemanal' || selectedChartType === 'canalMensual') {
-            yearsToDisplay = allYearsWithData.filter(year => {
-                for (let i = 1; i <= 7; i++) {
-                    if (!JSONende[selectedDiseaseKey].unidades[selectedUnitKey].datosSemanales[(year - i).toString()]) return false;
-                }
-                return true;
-            }).sort((a, b) => b - a);
+            const allWeeklyData = JSONende[selectedDiseaseKey].unidades[selectedUnitKey].datosSemanales;
+            const conHistorico = allYearsWithData.filter(year => {
+                const anteriores = Array.from({ length: 7 }, (_, i) => year - i - 1)
+                    .filter(anio => allWeeklyData[anio]?.some(v => Number.isFinite(v)));
+                // Mantener los canales validados (7 años), y habilitar años recientes
+                // con historial parcial, por ejemplo IAAS desde 2023.
+                return anteriores.length === 7 || (year >= 2023 && anteriores.length > 0);
+            });
+            yearsToDisplay = conHistorico.sort((a, b) => b - a);
         }
 
         if (yearsToDisplay.length === 0) {
-            const msg = `No hay años con suficientes datos históricos (7 años previos) para generar canales en ${selectedUnitKey}.`;
+            const msg = `No existen años anteriores con información para calcular un canal en ${selectedUnitKey}. Puede consultar "Incidencia semanal" o "Tendencia anual".`;
             chartContainer.html(`<p class="no-data-message">${msg}</p>`);
             limpiarStats();
             selectedYearForChannel = null;
@@ -202,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // --- FUNCIONES DE STATS CARDS ---
     function zonaActual(val, q1, median, q3) {
-        if (val === null || val === undefined) return null;
+        if (!Number.isFinite(val) || !Number.isFinite(q1) || !Number.isFinite(median) || !Number.isFinite(q3)) return null;
         if (val <= q1)     return 'exito';
         if (val <= median) return 'alerta';
         if (val <= q3)     return 'alarma';
@@ -217,12 +223,16 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const valid = current.filter(v => v !== null);
+        const valid = current.filter(v => Number.isFinite(v));
         const total = valid.reduce((s, v) => s + v, 0);
-        const semActual = valid.length;
-        const ultimoVal = valid.at(-1) ?? 0;
-        
-        const zona = zonaActual(ultimoVal, q1arr[semActual - 1], medianarr[semActual - 1], q3arr[semActual - 1]);
+        // La semana actual es la posición de la última observación, NO el conteo
+        // de celdas no vacías (importante para series históricas incompletas).
+        const ultimoIndice = current.reduce((pos, val, i) => Number.isFinite(val) ? i : pos, -1);
+        const semActual = ultimoIndice + 1;
+        const ultimoVal = ultimoIndice >= 0 ? current[ultimoIndice] : 0;
+        const zona = ultimoIndice >= 0
+            ? zonaActual(ultimoVal, q1arr[ultimoIndice], medianarr[ultimoIndice], q3arr[ultimoIndice])
+            : null;
         const zonaInfo = ZONAS[zona] || { label: '—', css: '' };
         
         const etiquetaPeriodo = type === 'canalMensual' ? 'Mes actual' : 'Semana actual';
@@ -269,10 +279,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (selectedChartType !== 'tendenciaAnual') {
             const currentDataRaw = allWeeklyData[selectedYearForChannel] || [];
             if (isChannel) {
-                const historicalYears = Array.from({ length: 7 }, (_, i) => (currentYear - (i + 1)).toString());
+                const historicalYears = Array.from({ length: 7 }, (_, i) => (currentYear - (i + 1)).toString())
+                    .filter(year => allWeeklyData[year]?.some(v => Number.isFinite(v)));
+                dataPackage.historicalYears = historicalYears;
                 let historicalPeriodData = historicalYears.map(year => {
                     const weeklyData = allWeeklyData[year];
-                    return weeklyData ? (isMonthly ? aggregateWeeklyToMonthly(weeklyData, year) : weeklyData) : null;
+                    return isMonthly ? aggregateWeeklyToMonthly(weeklyData, year) : weeklyData;
                 }).filter(Boolean);
 
                 const numPeriods = isMonthly ? 12 : Math.max(0, ...historicalPeriodData.map(d => d.length), currentDataRaw.length);
@@ -288,9 +300,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 for (let i = 0; i < numPeriods; i++) {
                     const periodValues = historicalPeriodData.map(yearData => yearData[i]).filter(v => v != null);
                     periodValues.sort((a, b) => a - b);
-                    dataPackage.q1.push(d3.quantile(periodValues, 0.25) || 0);
-                    dataPackage.median.push(d3.quantile(periodValues, 0.5) || 0);
-                    dataPackage.q3.push(d3.quantile(periodValues, 0.75) || 0);
+                    // Cuando no hay historia, conservar null en vez de fabricar límites cero.
+                    dataPackage.q1.push(periodValues.length ? d3.quantile(periodValues, 0.25) : null);
+                    dataPackage.median.push(periodValues.length ? d3.quantile(periodValues, 0.5) : null);
+                    dataPackage.q3.push(periodValues.length ? d3.quantile(periodValues, 0.75) : null);
                 }
             } else {
                 dataPackage.current = isMonthly ? aggregateWeeklyToMonthly(currentDataRaw, selectedYearForChannel) : currentDataRaw;
@@ -342,8 +355,14 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         
-        chartTitleElement.textContent = `${chartData.diseaseName} en ${chartData.unitName} (${chartData.year || 'Tendencia'})`;
-        chartSubtitleElement.textContent = chartDescriptions[selectedChartType];
+        const tituloPeriodo = chartData.type === 'tendenciaAnual' ? 'Tendencia anual' : chartData.year;
+        chartTitleElement.textContent = `${chartData.diseaseName} en ${chartData.unitName} (${tituloPeriodo})`;
+        const nHistoricos = chartData.historicalYears?.length ?? 0;
+        const notaHistorica = (selectedChartType === 'canalSemanal' || selectedChartType === 'canalMensual') && nHistoricos < 7
+            ? ` Canal exploratorio: solo ${nHistoricos} año(s) previos disponibles; no equivale a un canal basado en siete años.`
+            : '';
+        const notaPadecimiento = JSONende[selectedDiseaseKey]?.notaDatos || '';
+        chartSubtitleElement.textContent = `${chartDescriptions[selectedChartType]}${notaHistorica} ${notaPadecimiento}`.trim();
 
         if (selectedChartType === 'canalSemanal' || selectedChartType === 'canalMensual') {
             renderStats(chartData.current, chartData.q1, chartData.median, chartData.q3, selectedChartType);
@@ -363,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- DIBUJO CON ANIMACIONES, EJE RESPONSIVO Y ETIQUETAS ---
     function drawCanalEndemicoBase(chartData, isWeekly) {
         if (isWeekly) {
-            const displayPeriods = 52;
+            const displayPeriods = 53;
             chartData.numPeriods = Math.min(chartData.numPeriods, displayPeriods);
             chartData.current = chartData.current.slice(0, displayPeriods);
             chartData.q1 = chartData.q1.slice(0, displayPeriods);
@@ -490,8 +509,10 @@ document.addEventListener('DOMContentLoaded', function () {
         animateLine(chartData.median, COLORS.MEDIANA_HISTORICA, 2, "4 4");
         animateLine(chartData.current, COLORS.CASOS_ACTUALES, 3);
 
-        svg.selectAll(".current-case-point").data(chartData.current).enter().filter(d => d != null)
-            .append("circle").attr("class", "current-case-point").attr("cx", (d, i) => xScale(i + 1)).attr("cy", d => yScale(d))
+        svg.selectAll(".current-case-point").data(chartData.current.map((valor, i) => ({ valor, semana: i + 1 })))
+            .enter().filter(d => Number.isFinite(d.valor))
+            .append("circle").attr("class", "current-case-point")
+            .attr("cx", d => xScale(d.semana)).attr("cy", d => yScale(d.valor))
             .attr("r", 3.5).attr("fill", COLORS.CASOS_ACTUALES).attr("stroke", "white").attr("stroke-width", 1)
             .style("opacity", 0)
             .transition()
@@ -521,9 +542,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function drawIncidencia(chartData, isWeekly) {
         if (isWeekly) {
-            const displayPeriods = 52;
-            chartData.numPeriods = Math.min(chartData.numPeriods, displayPeriods);
-            chartData.current = chartData.current.slice(0, displayPeriods);
+            const displayPeriods = 53;
+            // No dibujar semanas futuras como barras con valor cero cuando aún son null.
+            const lastObserved = chartData.current.reduce((last, val, index) => Number.isFinite(val) ? index : last, -1);
+            chartData.numPeriods = Math.min(chartData.numPeriods, displayPeriods, Math.max(lastObserved + 1, 1));
+            chartData.current = chartData.current.slice(0, chartData.numPeriods);
         }
 
         const svg = chartContainer.append("svg").attr("width", svgWidth).attr("height", svgHeight).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
