@@ -83,20 +83,7 @@ export function findIndicatorByClave(year, month, clave) {
 }
 
 /**
- * Resuelve la configuración visual (umbrales, colores, decimales) de UN indicador
- * en UN periodo específico. Devuelve el mismo "shape" que esperaba el código
- * original de indicadores.js para no romper la lógica de dibujo D3:
- *
- *   {
- *     umbralSuperior, umbralInferior,
- *     colorSuperior, colorInferior,
- *     backgroundColors: [colorAlto, colorMedio, colorBajo],
- *     valorMinimoRojo?,        // solo si el indicador lo define
- *     decimales,
- *     // Metadatos extra (no rompen el dibujo si los ignora):
- *     tipoEvaluacion: "mayor_es_mejor" | "menor_es_mejor" | "intervalo_optimo",
- *     etiquetaAlto, etiquetaMedio, etiquetaBajo
- *   }
+ * Resuelve umbrales y metadatos del indicador para el periodo aplicable.
  *
  * @param {string|number} year
  * @param {string} month
@@ -114,44 +101,14 @@ export function resolveConfig(year, month, idx) {
   const r = porPeriodo[month] || rangos.default || null;
   if (!r) return null;
 
-  // Paleta estándar IMSS:
-  //  - mayor_es_mejor: [VERDE alto, AMARILLO medio, ROJO bajo]
-  //  - menor_es_mejor: [ROJO alto, AMARILLO medio, VERDE bajo]
-  //  - intervalo_optimo: [ROJO alto, VERDE medio, ROJO bajo]
-const VERDE    = "rgba(52, 168, 83, 1)";
-const AMARILLO = "rgba(251, 188, 5, 1)";
-const ROJO     = "rgba(234, 67, 53, 1)";
-
-  const tipo = rangos.tipo || "mayor_es_mejor";
-  let backgroundColors, etiquetaAlto, etiquetaMedio, etiquetaBajo;
-
-  if (tipo === "mayor_es_mejor") {
-    backgroundColors = [VERDE, AMARILLO, ROJO];
-    etiquetaAlto  = "Esperado";
-    etiquetaMedio = "Medio";
-    etiquetaBajo  = "Bajo";
-  } else if (tipo === "menor_es_mejor") {
-    backgroundColors = [ROJO, AMARILLO, VERDE];
-    etiquetaAlto  = "Alto";
-    etiquetaMedio = "Medio";
-    etiquetaBajo  = "Esperado";
-  } else { // intervalo_optimo
-    backgroundColors = [ROJO, VERDE, ROJO];
-    etiquetaAlto  = "Por encima";
-    etiquetaMedio = "Esperado";
-    etiquetaBajo  = "Por debajo";
-  }
-
   return {
     umbralSuperior: r.umbralSuperior,
     umbralInferior: r.umbralInferior,
     colorSuperior:  "rgb(255, 99, 132)",
     colorInferior:  "black",
-    backgroundColors,
     valorMinimoRojo: r.valorMinimoRojo,
     decimales:       indicador.decimales ?? 1,
-    tipoEvaluacion:  tipo,
-    etiquetaAlto, etiquetaMedio, etiquetaBajo
+    tipoEvaluacion:  rangos.tipo || "mayor_es_mejor"
   };
 }
 

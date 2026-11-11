@@ -1,0 +1,26 @@
+# Configuración de editor y accesos del equipo
+/.vscode/
+*.lnk
+
+# Respaldos y material de pruebas
+*.bundle
+verify-*.cjs
+capturar-*.cjs
+chrome-*/
+qa-*/
+variantes-*/
+/imagenes-identidad/
+galeria-*.html
+galeria-*.png
+/identidad-prevenimss.html
+/inicio-prevenimss-riel-lateral.png
+/[0-9][0-9][0-9]-*.png
+/[0-9][0-9][0-9][0-9]-*.png
+/_scratch-archivo/
+/prevenimss-ux-scratch/
+
+# Recursos archivados fuera del sitio publicado
+/assets/Fimss.png
+/assets/home-svgrepo-com.svg
+/assets/thumnails/
+/js/actualizar_canales.py

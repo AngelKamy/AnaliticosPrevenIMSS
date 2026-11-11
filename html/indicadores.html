@@ -5,85 +5,168 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Analíticos Hidalgo - Indicadores</title>
-    <link rel="icon" href="https://puntomedio.mx/wp-content/uploads/2019/12/IMSS-logo.png" />
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="icon" href="../assets/imss-icon.svg" />
+    <script src="../js/d3.v7.min.js"></script>
     <link rel="stylesheet" href="../css/mystyle.css" />
 </head>
 
 <body>
-    <nav>
-        <div class="encabezado">
-            <div class="logo">
-                <a href="../index.html">
-                    <img src="../assets/descarga.png" alt="logo_imss" />
-                </a>
-            </div>
-            <div class="titulo">
-                <h1>Dashboard Analíticos OOAD Hidalgo</h1>
-                <hr />
-                <h2>
-                    Coordinación delegacional de información y análisis estratégico
-                </h2>
+    <a class="skip-link" href="#contenido">Ir al contenido</a>
+    <header class="site-header">
+        <div class="site-shell site-header-inner">
+            <a class="site-brand" href="../index.html">
+                <span class="brand-mark"><img src="../assets/descarga.png" alt="IMSS" width="300" height="168" /></span>
+                <span><strong>Analíticos PrevenIMSS</strong><small>OOAD Hidalgo</small></span>
+            </a>
+            <div class="site-office">
+                <p>Jefatura de Servicios de Prestaciones Médicas<br />Coordinación de Información y Análisis Estratégico</p>
+                <span class="brand-mark brand-mark-ciae"><img src="../assets/logo-ciae.jpg" alt="CIAE Hidalgo" /></span>
             </div>
         </div>
-        <div class="menu_bar">
-            <ul>
-                <li id="home">
-                    <a href="../index.html">
-                        <svg padding="2px" width="15px" height="15px" viewBox="0 0 24 24" fill="none"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" clip-rule="evenodd"
-                                d="M4.18753 11.3788C4.03002 11.759 4 11.9533 4 12V20.0018C4 20.5529 4.44652 21 5 21H8V15C8 13.8954 8.89543 13 10 13H14C15.1046 13 16 13.8954 16 15V21H19C19.5535 21 20 20.5529 20 20.0018V12C20 11.9533 19.97 11.759 19.8125 11.3788C19.6662 11.0256 19.4443 10.5926 19.1547 10.1025C18.5764 9.1238 17.765 7.97999 16.8568 6.89018C15.9465 5.79788 14.9639 4.78969 14.0502 4.06454C13.5935 3.70204 13.1736 3.42608 12.8055 3.2444C12.429 3.05862 12.1641 3 12 3C11.8359 3 11.571 3.05862 11.1945 3.2444C10.8264 3.42608 10.4065 3.70204 9.94978 4.06454C9.03609 4.78969 8.05348 5.79788 7.14322 6.89018C6.23505 7.97999 5.42361 9.1238 4.8453 10.1025C4.55568 10.5926 4.33385 11.0256 4.18753 11.3788ZM10.3094 1.45091C10.8353 1.19138 11.4141 1 12 1C12.5859 1 13.1647 1.19138 13.6906 1.45091C14.2248 1.71454 14.7659 2.07921 15.2935 2.49796C16.3486 3.33531 17.4285 4.45212 18.3932 5.60982C19.3601 6.77001 20.2361 8.0012 20.8766 9.08502C21.1963 9.62614 21.4667 10.1462 21.6602 10.6134C21.8425 11.0535 22 11.5467 22 12V20.0018C22 21.6599 20.6557 23 19 23H16C14.8954 23 14 22.1046 14 21V15H10V21C10 22.1046 9.10457 23 8 23H5C3.34434 23 2 21.6599 2 20.0018V12C2 11.5467 2.15748 11.0535 2.33982 10.6134C2.53334 10.1462 2.80369 9.62614 3.12345 9.08502C3.76389 8.0012 4.63995 6.77001 5.60678 5.60982C6.57152 4.45212 7.65141 3.33531 8.70647 2.49796C9.2341 2.07921 9.77521 1.71454 10.3094 1.45091Z"
-                                fill="#FFFFFF" />
-                        </svg>
-                    </a>
-                </li>
-                <li><a href="./indicadores.html" class="active">Indicadores</a></li>
+        <nav class="site-nav" aria-label="Navegación principal">
+            <ul class="site-shell">
+                <li><a href="../index.html">Inicio</a></li>
                 <li><a href="./coberturas.html">Coberturas</a></li>
+                <li><a href="./indicadores.html" aria-current="page">Indicadores</a></li>
                 <li><a href="./canales_endemicos.html">Canales endémicos</a></li>
+                <li><a href="./fichas.html">Fichas</a></li>
+                <li><a href="./mortalidad.html">Mortalidad</a></li>
+                <li><a href="./incidencia.html">Incidencia</a></li>
             </ul>
-        </div>
-    </nav>
+        </nav>
+    </header>
 
-    <div class="container_page layout">
-        <aside class="sidebar">
-            <h3>Indicadores</h3>
-            <ul id="indicadorList"></ul>
-        </aside>
-
-        <div class="main-content">
-            <nav class="tabs">
-                <ul id="yearTabs" class="tab-list"></ul>
-            </nav>
-            <nav class="tabs-months">
-                <ul id="monthTabs" class="tab-list"></ul>
-            </nav>
-
-            <div id="productividadChartContainer" style="display: block">
-                <div id="productividadChart" class="chart-container-d3"></div>
-                <p class="chart-footer">
-                    Fuente: SIAIS/ARIMAC/IBS - Actualizado al último corte disponible
-                </p>
-            </div>
-
-            <div id="historicalChartContainer" style="display: none">
-                <div class="historical-chart-header">
-                    <h3 id="historicalChartTitle"></h3>
-                    <button id="closeHistoricalChart">Cerrar</button>
+    <main id="contenido" class="container_page site-shell page-main" tabindex="-1">
+      <header class="page-heading module-heading">
+        <p class="eyebrow">Analíticos PrevenIMSS</p>
+        <div class="module-heading-row">
+            <h1>Indicadores</h1>
+            <div class="filter-help">
+                <details>
+                    <summary class="filter-help-trigger" aria-label="Ayuda de filtros" aria-controls="indicatorFilterHelp" aria-describedby="indicatorFilterHelp"><span aria-hidden="true">?</span></summary>
+                </details>
+                <div id="indicatorFilterHelp" class="filter-help-panel">
+                    <p id="manualLabel" aria-live="polite"></p>
+                    <p>Atajo en los controles de secuencia · Alt + ← / →</p>
                 </div>
-                <div id="historicalChart" class="chart-container-d3"></div>
-                <div class="slider-controls">
-                    <button id="prevButton" title="Mes Anterior">&lt;</button>
-                    <div class="slider-container">
-                        <label for="timeSlider">Mes:</label>
-                        <input type="range" id="timeSlider" name="timeSlider" min="0" max="11" step="1" value="0" />
+            </div>
+        </div>
+      </header>
+        <section class="filters" aria-label="Filtros de indicadores">
+            <div class="filter-bar context-filter-bar" id="indicatorFilters">
+                <div class="filter-field filter-category" id="indicatorCategoryFilter">
+                    <label for="overviewCategory">Categoría</label>
+                    <div class="filter-control">
+                        <select id="overviewCategory" aria-describedby="indicatorCategoryHelp" disabled></select>
                     </div>
-                    <button id="nextButton" title="Mes Siguiente">&gt;</button>
-                    <span id="sliderValueLabel"></span>
+                    <small id="indicatorCategoryHelp" class="filter-note" hidden>El catálogo de este periodo no incluye categorías.</small>
+                </div>
+                <div class="filter-field indicator-combobox" id="indicatorSequence" role="group" aria-labelledby="indicatorFilterLabel" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight" hidden>
+                    <label id="indicatorFilterLabel" for="indicatorSearch">Indicador</label>
+                    <div class="filter-sequence">
+                        <button class="filter-step" type="button" data-step="-1" aria-label="Indicador anterior">‹</button>
+                        <div class="search-field">
+                            <svg aria-hidden="true" focusable="false"><use href="../assets/ui-icons.svg#search"></use></svg>
+                            <input id="indicatorSearch" class="search-input" type="search" placeholder="Ej. DM 01 o mastografía"
+                                role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="indicadorList"
+                                aria-describedby="indicatorSelected manualLabel" autocomplete="off" spellcheck="false" disabled />
+                        </div>
+                        <button class="filter-step" type="button" data-step="1" aria-label="Indicador siguiente">›</button>
+                    </div>
+                    <p id="indicatorSelected" class="combobox-selection"></p>
+                    <div id="indicatorOptionsPanel" class="combobox-panel" hidden>
+                        <p id="indicatorSearchStatus" class="filter-note" role="status"></p>
+                        <ul id="indicadorList" role="listbox" aria-labelledby="indicatorFilterLabel"></ul>
+                    </div>
+                </div>
+                <fieldset class="period-filter">
+                    <legend class="visually-hidden">Periodo</legend>
+                    <div class="period-fields">
+                        <div class="filter-field">
+                            <label for="yearTabs">Año</label>
+                            <div class="filter-control">
+                                <select id="yearTabs" disabled></select>
+                            </div>
+                        </div>
+                        <div class="filter-field" id="indicatorPeriod" role="group" aria-label="Mes de indicadores" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight">
+                            <label for="monthTabs">Mes</label>
+                            <div class="filter-sequence">
+                                <button class="filter-step" type="button" data-step="-1" aria-label="Mes anterior">‹</button>
+                                <div class="filter-control">
+                                    <select id="monthTabs" disabled></select>
+                                </div>
+                                <button class="filter-step" type="button" data-step="1" aria-label="Mes siguiente">›</button>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+                <div class="filter-field" id="overviewUnitFilter">
+                    <label for="overviewUnit">Unidad</label>
+                    <div class="filter-control">
+                        <select id="overviewUnit"></select>
+                    </div>
                 </div>
             </div>
+            <button id="resetIndicatorFilters" class="text-button filter-reset" type="button" hidden>Restablecer filtros</button>
+        </section>
+
+        <div id="indicatorViews" class="view-switch" role="group" aria-label="Vista de indicadores">
+            <button type="button" class="button" data-view="resumen" aria-pressed="true"><svg aria-hidden="true" focusable="false"><use href="../assets/ui-icons.svg#file"></use></svg>Resumen del mes</button>
+            <button type="button" class="button" data-view="indicador" aria-pressed="false"><svg aria-hidden="true" focusable="false"><use href="../assets/ui-icons.svg#bars"></use></svg>Gráficas por indicador</button>
+            <button type="button" class="button" data-view="mapa" aria-pressed="false"><svg aria-hidden="true" focusable="false"><use href="../assets/ui-icons.svg#heatmap"></use></svg>Mapa de calor</button>
         </div>
-    </div>
+        <div id="indicatorDataView"></div>
+        <section id="indicatorOverview" class="module-results report-panel panel data-graph" aria-labelledby="overviewTitle">
+            <h2 id="overviewTitle" class="section-heading overview-heading">Semáforo del mes <span aria-hidden="true">–</span> <span id="overviewPeriod" class="period-chip" aria-live="polite"></span></h2>
+            <p id="overviewMethodology" class="helper-text">Metodología pendiente de la actualización de los datos y del MMIM.</p>
+            <div id="overviewTable" class="table-scroll data-graph" role="region" tabindex="0" aria-labelledby="overviewTitle" aria-describedby="overviewMethodology"></div>
+        </section>
+
+        <section class="module-results report-panel panel data-graph" aria-labelledby="tituloGrafica" id="productividadChartContainer">
+            <h2 id="tituloGrafica" tabindex="-1" class="section-heading" aria-live="polite">Gráficas por indicador</h2>
+            <ul id="indicatorLegend" class="chart-legend" aria-label="Semáforo MMIM"></ul>
+            <p id="indicatorHelp" class="helper-text">Selecciona una barra para consultar el histórico de esa unidad. En pantallas pequeñas puedes desplazar la gráfica horizontalmente.</p>
+            <div id="productividadChart" class="chart-scroll" role="region" tabindex="0" aria-label="Gráfica por indicador" aria-describedby="indicatorHelp">
+                <p class="no-data-message" role="status">Cargando indicadores…</p>
+            </div>
+            <p class="helper-text">Fuente · SIAIS/ARIMAC/IBS · Último corte disponible</p>
+        </section>
+
+        <section id="heatmapPanel" class="module-results report-panel data-graph" aria-labelledby="heatmapTitle" hidden>
+            <h2 id="heatmapTitle" class="section-heading">
+                <span class="eyebrow">Mapa de calor · <span id="heatmapCode"></span></span>
+                <span id="heatmapName"></span>
+            </h2>
+            <p id="heatmapHelp" class="helper-text">Selecciona una unidad o una celda con valor para abrir el historial. Cada celda usa el manual del periodo.</p>
+            <ul id="heatmapLegend" class="chart-legend heatmap-legend" aria-label="Leyenda de desempeño y símbolos"></ul>
+            <div id="heatmapTable" class="table-scroll heatmap-scroll" role="region" tabindex="0" aria-label="Unidades por mes" aria-describedby="heatmapHelp"></div>
+        </section>
+
+        <section class="module-results report-panel panel data-graph" aria-labelledby="historicalChartTitle" id="historicalChartContainer" hidden>
+            <div class="historical-chart-header">
+                <h2 id="historicalChartTitle" class="section-heading" tabindex="-1"></h2>
+                <button class="button" id="closeHistoricalChart" type="button">Volver a unidades</button>
+            </div>
+            <p id="historicalReference" class="helper-text"></p>
+            <dl id="historyChips" class="channel-stats" aria-label="Variaciones del periodo" aria-live="polite"></dl>
+            <div id="historicalChart" class="chart-scroll" role="region" tabindex="0" aria-label="Gráfica histórica"></div>
+            <div class="slider-controls" role="group" aria-label="Mes del historial">
+                <div class="filter-field">
+                    <label for="timeSlider">Mes</label>
+                    <div class="filter-sequence">
+                        <button class="filter-step" id="prevButton" type="button" aria-label="Anterior">‹</button>
+                        <input type="range" id="timeSlider" min="0" max="11" step="1" value="0" />
+                        <button class="filter-step" id="nextButton" type="button" aria-label="Siguiente">›</button>
+                    </div>
+                </div>
+                <output id="sliderValueLabel" for="timeSlider" aria-live="polite"></output>
+            </div>
+            <p class="helper-text">Línea discontinua · referencia operativa. Los meses sin información y los cambios de manual interrumpen la serie.</p>
+        </section>
+        <div id="indicatorTooltip" class="chart-tooltip" role="tooltip" hidden></div>
+    </main>
+    <footer class="site-footer" data-site-footer></footer>
+    <script type="module" src="../js/footer.js"></script>
 
     <script type="module" src="../js/indicadores.js"></script>
 </body>

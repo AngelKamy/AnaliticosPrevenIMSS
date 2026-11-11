@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fichas técnicas mensuales | Analíticos Hidalgo</title>
+    <link rel="icon" href="../assets/imss-icon.svg" />
+    <link rel="stylesheet" href="../css/mystyle.css" />
+
+</head>
+<body>
+    <a class="skip-link" href="#contenido">Ir al contenido</a>
+    <header class="site-header">
+        <div class="site-shell site-header-inner">
+            <a class="site-brand" href="../index.html">
+                <span class="brand-mark"><img src="../assets/descarga.png" alt="IMSS" width="300" height="168" /></span>
+                <span><strong>Analíticos PrevenIMSS</strong><small>OOAD Hidalgo</small></span>
+            </a>
+            <div class="site-office">
+                <p>Jefatura de Servicios de Prestaciones Médicas<br />Coordinación de Información y Análisis Estratégico</p>
+                <span class="brand-mark brand-mark-ciae"><img src="../assets/logo-ciae.jpg" alt="CIAE Hidalgo" /></span>
+            </div>
+        </div>
+        <nav class="site-nav" aria-label="Navegación principal">
+            <ul class="site-shell">
+                <li><a href="../index.html">Inicio</a></li>
+                <li><a href="./coberturas.html">Coberturas</a></li>
+                <li><a href="./indicadores.html">Indicadores</a></li>
+                <li><a href="./canales_endemicos.html">Canales endémicos</a></li>
+                <li><a href="./fichas.html" aria-current="page">Fichas</a></li>
+                <li><a href="./mortalidad.html">Mortalidad</a></li>
+                <li><a href="./incidencia.html">Incidencia</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="contenido" class="container_page site-shell page-main" tabindex="-1">
+      <header class="page-heading module-heading">
+        <p class="eyebrow">Evaluación Integral PrevenIMSS</p>
+        <h1>Fichas técnicas mensuales</h1>
+      </header>
+      <section class="filters filters--compact" aria-label="Periodo de publicación">
+          <div class="filter-bar">
+              <div class="filter-field">
+                  <label for="fichaYear">Año</label>
+                  <div class="filter-control">
+                      <select id="fichaYear" disabled></select>
+                  </div>
+              </div>
+              <div class="filter-field">
+                  <label for="fichaMonth">Mes</label>
+                  <div class="filter-control">
+                      <select id="fichaMonth" disabled></select>
+                  </div>
+              </div>
+          </div>
+      </section>
+      <section id="fichasList" class="module-results ficha-list" aria-label="Fichas publicadas" aria-live="polite"></section>
+    </main>
+    <footer class="site-footer" data-site-footer></footer>
+    <script type="module" src="../js/footer.js"></script>
+
+    <script type="module" src="../js/fichas.js"></script>
+    <script type="module" src="../js/accesos.js"></script>
+</body>
+</html>

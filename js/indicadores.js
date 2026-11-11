@@ -1,38 +1,25 @@
-/**
- * indicadores.js
- * --------------
- * Reescrito para consumir catálogos por versión de MMIM mediante el resolver.
- *
- * Cambios principales vs. versión anterior:
- *   1) Las etiquetas y umbrales ya NO se leen de JSONprod.js. Se obtienen del
- *      catálogo aplicable a (año, mes) que devuelve manual_resolver.pickManual().
- *   2) El sidebar se RECONSTRUYE cuando cambia el mes y el manual aplicable
- *      cambia (ej. Agosto 2025 -> Septiembre 2025).
- *   3) La selección del indicador se preserva por CLAVE (ej. "DM 01"), no por
- *      índice numérico. Si el indicador no existe en el manual destino, cae al
- *      primero del nuevo catálogo.
- *   4) Las gráficas históricas evalúan cada punto con el catálogo correspondiente
- *      a SU propio (año, mes), no al actualmente seleccionado en pantalla.
- *   5) Bug corregido en `actualizarPuntoDeslizanteYBotones`:
- *      `d.originalMonth` -> `dataPoint.originalMonth`.
- */
-
 import { datosProductividad } from "./JSONprod.js";
+import { estadoVisual, estados, leyendaUmbrales, referenciaVisible } from "./desempeno.js";
+import { crearSelectorIndicador } from "./selector-indicador.js";
+import { crearVistaDatos, redondearDato } from "./datos-vista.js";
+import { brecha, clavePeriodo, dibujarHistorial, fichasMMIM2025, referenciaOperativa, seriePorUnidad, variacion } from "./historial.js";
+import { cargarSelector, posicionarTooltip, controlSecuencia, guardarHash, leerHash, periodosDisponibles } from "./ui.js";
 import {
   pickManual,
-  getCatalog,
   getActiveIndicators,
-  findIndicatorByClave,
   resolveConfig,
   labelDe,
   MONTH_ORDER
 } from "./catalogs/manual_resolver.js";
 
 document.addEventListener('DOMContentLoaded', function () {
+  if (!window.d3) {
+    document.querySelector('#productividadChart [role="status"]').textContent = 'No se pudieron cargar las gráficas. Recarga la página para volver a intentar.';
+    return;
+  }
   // ===== Selectores del DOM =====
   const yearTabs = document.getElementById('yearTabs');
   const monthTabs = document.getElementById('monthTabs');
-  const indicadorList = document.getElementById('indicadorList');
   const productividadChartContainer = d3.select("#productividadChartContainer");
   const chartContainer = d3.select("#productividadChart");
 
@@ -47,107 +34,176 @@ document.addEventListener('DOMContentLoaded', function () {
   const nextButton = d3.select("#nextButton");
 
   // ===== Geometría =====
-  const margin = { top: 80, right: 140, bottom: 50, left: 200 };
-  const width = 1000 - margin.left - margin.right;
-  const height = 600 - margin.top - margin.bottom;
-  const hMargin = { top: 50, right: 50, bottom: 70, left: 70 };
-  const hWidth = 800 - hMargin.left - hMargin.right;
-  const hHeight = 400 - hMargin.top - hMargin.bottom;
+  const margin = { top: 18, right: 100, bottom: 40, left: 160 };
+  let width, height;
 
   // ===== Estado =====
-  let svg, xScale, yScale, tooltip;
+  let svg, xScale, yScale, historicalTrigger;
+  const tooltip = d3.select("#indicatorTooltip");
+  const legend = d3.select("#indicatorLegend");
   let selectedYear, selectedMonth;
+  let activeView = 'resumen';
+  let overviewUnit = null;
+  let activeCategory = '';
+  const overview = document.getElementById('indicatorOverview');
+  const unitFilter = document.getElementById('overviewUnitFilter');
+  const unitSelect = document.getElementById('overviewUnit');
+  const categorySelect = document.getElementById('overviewCategory');
+  const indicatorSequence = document.getElementById('indicatorSequence');
+  const resetFilters = document.getElementById('resetIndicatorFilters');
+  const viewButtons = [...document.querySelectorAll('#indicatorViews [data-view]')];
+  const periods = periodosDisponibles(datosProductividad, MONTH_ORDER);
+  const periodKeys = periods.map(({ year, month }) => year + '/' + month);
+  const defaultPeriod = periods.at(-1);
+  const selector = crearSelectorIndicador(indicatorSequence, chooseIndicator, () => {
+    syncIndicators();
+    syncReset();
+  });
+  const syncPeriods = controlSecuencia(document.getElementById('indicatorPeriod'),
+    () => periodKeys, () => selectedYear + '/' + selectedMonth, key => {
+      [selectedYear, selectedMonth] = key.split('/');
+      cerrarGraficoHistorico(false);
+      selector.reset();
+      cargarAnos();
+    });
+  const syncIndicators = controlSecuencia(indicatorSequence,
+    selector.keys, () => selectedIndicatorClave, chooseIndicator);
+
   let selectedIndicatorClave = null;     // ← ahora rastreamos por CLAVE, no por idx
-  let historicalSvg, xHistoricalScale, yHistoricalScale, historicalLine, slidingDot;
+  let historyUnit = null;
+  let historyPeriod = null;
+  let returnView = 'indicador';
+  const heatmapPanel = document.getElementById('heatmapPanel');
   let currentHistoricalData = [];
 
   // ===========================================================================
   // HELPERS DE CATÁLOGO
   // ===========================================================================
 
-  /**
-   * Devuelve el indicador activo seleccionado actualmente para el periodo en
-   * pantalla, o el primer activo si la clave previa ya no existe en este
-   * manual. Devuelve { ...indicador, idx } o null si el catálogo no tiene
-   * indicadores activos.
-   */
+  const catalogoActivo = () => selectedYear && selectedMonth ? getActiveIndicators(selectedYear, selectedMonth) : [];
+  const indicadoresDeCategoria = () => catalogoActivo().filter(ind => !activeCategory || ind.grupo === activeCategory);
   function getSelectedIndicator() {
-    if (!selectedYear || !selectedMonth) return null;
-
-    // 1) Si tenemos clave, intentamos resolverla en el catálogo actual
-    if (selectedIndicatorClave) {
-      const found = findIndicatorByClave(selectedYear, selectedMonth, selectedIndicatorClave);
-      if (found && found.activo) return found;
-    }
-
-    // 2) Fallback: primer indicador activo
-    const activos = getActiveIndicators(selectedYear, selectedMonth);
-    if (activos.length === 0) return null;
-    selectedIndicatorClave = activos[0].clave;
-    return activos[0];
+    const options = indicadoresDeCategoria();
+    const selected = options.find(ind => ind.clave === selectedIndicatorClave) ?? options[0] ?? null;
+    selectedIndicatorClave = selected?.clave ?? null;
+    return selected;
   }
+
+  function syncReset() {
+    const scope = datosProductividad[selectedYear]?.[selectedMonth] || [];
+    const defaultUnit = scope.find(row => /delegacional/i.test(row.unidad))?.unidad ?? scope[0]?.unidad;
+    const defaultIndicator = catalogoActivo()[0]?.clave;
+    resetFilters.hidden = !(selectedYear !== defaultPeriod?.year || selectedMonth !== defaultPeriod?.month ||
+      activeCategory || (activeView === 'resumen' && overviewUnit && overviewUnit !== defaultUnit) ||
+      (activeView !== 'resumen' && selectedIndicatorClave !== defaultIndicator) || selector.hasQuery());
+  }
+
+  const mobileFilters = matchMedia('(max-width: 36rem)');
+  const categoryFilter = document.getElementById('indicatorCategoryFilter');
+  const filters = document.getElementById('indicatorFilters');
+  function orderFilters() {
+    const focused = document.activeElement;
+    if (mobileFilters.matches && filters.firstElementChild !== indicatorSequence) categoryFilter.before(indicatorSequence);
+    if (!mobileFilters.matches && filters.firstElementChild !== categoryFilter) indicatorSequence.before(categoryFilter);
+    if (indicatorSequence.contains(focused) && document.activeElement !== focused) focused.focus({ preventScroll: true });
+  }
+  mobileFilters.addEventListener('change', orderFilters);
+  orderFilters();
 
   // ===========================================================================
   // INIT
   // ===========================================================================
 
-  function initSVG() {
-    chartContainer.html('');
-    const svgEl = chartContainer.append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
-      .style("background", "#fff")
-      .style("border-radius", "10px")
-      .style("box-shadow", "0 4px 8px rgba(0,0,0,0.1)");
+  const vistaDatos = crearVistaDatos(document.getElementById('indicatorDataView'), getData, actualizarGrafico);
 
-    svgEl.append("text")
-      .attr("id", "tituloGrafica")
-      .attr("x", margin.left + width / 2).attr("y", 30).attr("text-anchor", "middle")
-      .style("font-family", "Montserrat, sans-serif").style("font-size", "16px")
-      .style("fill", "#2c3e50").style("font-weight", "700");
-
-    svg = svgEl.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-
-    tooltip = d3.select("body").append("div")
-      .attr("class", "chart-tooltip")
-      .style("position", "absolute").style("opacity", 0).style("pointer-events", "none")
-      .style("background", "rgba(44,62,80,0.95)").style("color", "#fff")
-      .style("padding", "10px 15px").style("border-radius", "6px")
-      .style("font-family", "Montserrat, sans-serif").style("font-size", "13px")
-      .style("z-index", 1070).style("box-shadow", "0 2px 5px rgba(0,0,0,0.2)");
+  function getData() {
+    const indicator = getSelectedIndicator();
+    const scope = datosProductividad[selectedYear]?.[selectedMonth] || [];
+    const manual = pickManual(selectedYear, selectedMonth);
+    const label = indicator ? labelDe(indicator) : 'Indicadores';
+    const status = (value, config) => Number.isFinite(value) ? estadoVisual(value, config || {})?.label ?? null : null;
+    const valueFor = (value, config) => redondearDato(value, config?.decimales ?? 1);
+    if (activeView === 'resumen') {
+      const unit = scope.find(row => row.unidad === overviewUnit);
+      return {
+        title: `Indicadores · ${overviewUnit || 'Unidad'} · ${selectedMonth} ${selectedYear} · MMIM ${manual}`,
+        columns: ['Clave', 'Indicador', 'Valor', 'Desempeño', 'Umbral inferior', 'Umbral superior'],
+        rows: getActiveIndicators(selectedYear, selectedMonth).filter(ind => !activeCategory || ind.grupo === activeCategory)
+          .map(ind => {
+            const value = unit?.indicador?.[ind.idx];
+            const config = resolveConfig(selectedYear, selectedMonth, ind.idx);
+            return [ind.clave, ind.nombre, valueFor(value, config), status(value, config), config?.umbralInferior, config?.umbralSuperior];
+          })
+      };
+    }
+    if (activeView === 'historial' || activeView === 'mapa') {
+      const units = activeView === 'historial' ? [historyUnit] :
+        [...new Set(periods.flatMap(({ year, month }) => datosProductividad[year][month].map(row => row.unidad)))];
+      return {
+        title: label + ' · ' + (activeView === 'historial' ? 'Historial · ' + historyUnit : 'Mapa de calor'),
+        columns: ['Unidad', 'Año', 'Mes', 'MMIM', 'Valor', 'Desempeño', 'Umbral inferior', 'Umbral superior', 'Brecha operativa'],
+        rows: units.flatMap(unit => seriePorUnidad(datosProductividad, periods, unit, indicator?.clave, manual)
+          .map(point => [unit, Number(point.year), point.month, point.manual, valueFor(point.value, point.config),
+            point.otraDefinicion ? 'Otra definición' : status(point.value, point.config),
+            point.config?.umbralInferior, point.config?.umbralSuperior, valueFor(brecha(point), point.config)]))
+      };
+    }
+    const config = indicator ? resolveConfig(selectedYear, selectedMonth, indicator.idx) : null;
+    return {
+      title: `${label} · ${selectedMonth} ${selectedYear} · MMIM ${manual}`,
+      columns: ['Unidad', 'Valor', 'Desempeño', 'Umbral inferior', 'Umbral superior'],
+      rows: scope.map(row => ({ unit: row.unidad, value: row.indicador?.[indicator?.idx] }))
+        .sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity))
+        .map(({ unit, value }) => [unit, valueFor(value, config), status(value, config), config?.umbralInferior, config?.umbralSuperior])
+    };
   }
 
-  // ===========================================================================
-  // GRÁFICA PRINCIPAL
-  // ===========================================================================
-
   function actualizarGrafico() {
-    if (svg) {
-      svg.selectAll(":not(.bar)").remove();
-    }
+    renderGrafico();
+    vistaDatos.actualizar();
+  }
 
+  function renderGrafico() {
+    chartContainer.html('');
+    legend.html('');
+    tooltip.attr("hidden", "");
     const indicador = getSelectedIndicator();
-    if (!selectedYear || !selectedMonth || !indicador) {
-      if (svg) {
-        svg.selectAll("*").remove();
-        svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle")
-          .style("font-family", "Montserrat, sans-serif").style("font-size", "16px")
-          .text("Seleccione año, mes e indicador para ver datos.");
-      }
+    indicatorSequence.hidden = activeView === 'resumen';
+    unitFilter.hidden = activeView !== 'resumen';
+    selector.update(indicadoresDeCategoria(), indicador);
+    syncPeriods();
+    syncIndicators();
+    syncReset();
+    guardarHash({ anio: selectedYear, mes: selectedMonth, indicador: activeView !== 'resumen' ? selectedIndicatorClave : null,
+      categoria: activeCategory, unidad: overviewUnit, vista: activeView,
+      unidadHist: activeView === 'historial' ? historyUnit : null, corteHist: activeView === 'historial' ? historyPeriod : null,
+      desde: activeView === 'historial' ? returnView : null });
+    for (const button of viewButtons) button.setAttribute('aria-pressed', button.dataset.view === (activeView === "historial" ? returnView : activeView));
+    overview.hidden = activeView !== 'resumen';
+    productividadChartContainer.property('hidden', activeView !== 'indicador');
+    heatmapPanel.hidden = activeView !== 'mapa';
+    historicalChartMainContainer.property('hidden', activeView !== 'historial');
+    if (activeView === 'mapa') {
+      renderHeatmap(indicador);
       return;
     }
-
-    const eventBlocker = productividadChartContainer.append("div")
-      .style("position", "absolute").style("top", 0).style("left", 0)
-      .style("width", "100%").style("height", "100%")
-      .style("z-index", 10);
+    if (activeView === 'historial') {
+      renderHistory(indicador);
+      return;
+    }
+    if (activeView === 'resumen') {
+      renderOverview();
+      return;
+    }
+    d3.select("#tituloGrafica").text(indicador ? labelDe(indicador) : "Gráficas por indicador");
+    if (!selectedYear || !selectedMonth || !indicador) {
+      chartContainer.append("p").attr("class", "no-data-message").text("Seleccione año, mes e indicador para ver datos.");
+      return;
+    }
 
     const año = selectedYear;
     const mes = selectedMonth;
     const idx = indicador.idx;
-
-    // Etiqueta del título: clave + nombre
-    d3.select("#tituloGrafica").text(labelDe(indicador));
 
     const datosOriginales = datosProductividad[año]?.[mes] || [];
     const datos = datosOriginales
@@ -158,75 +214,66 @@ document.addEventListener('DOMContentLoaded', function () {
       .filter(d => d.valor > 0)
       .sort((a, b) => b.valor - a.valor);
 
+    const config = resolveConfig(año, mes, idx) || {};
+    dibujarLeyenda(config);
     if (datos.length === 0) {
-      svg.selectAll("*").remove();
-      svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle")
-        .style("font-family", "Montserrat, sans-serif").style("font-size", "16px")
-        .text("No hay datos disponibles para esta selección.");
-      eventBlocker.remove();
+      chartContainer.append("p").attr("class", "no-data-message").text("No hay datos disponibles para esta selección.");
       return;
     }
 
-    // Resolución de configuración visual desde el catálogo aplicable
-    const config = resolveConfig(año, mes, idx) || {};
+    const chartWidth = Math.max(330, chartContainer.node().clientWidth);
+    margin.left = chartWidth < 470 ? 98 : chartWidth < 700 ? 126 : 160;
+    margin.right = chartWidth < 470 ? 106 : 132;
+    width = chartWidth - margin.left - margin.right;
+    height = Math.max(150, datos.length * 25);
+    svg = chartContainer.append("svg")
+      .attr("width", chartWidth).attr("height", height + margin.top + margin.bottom)
+      .attr("viewBox", `0 0 ${chartWidth} ${height + margin.top + margin.bottom}`)
+      .attr("role", "group").attr("aria-labelledby", "tituloGrafica")
+      .append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
     crearEscalas(datos);
-    dibujarEjes(datos);
-    dibujarUmbrales(config);
+    dibujarEjes();
     dibujarBarras(datos, config, indicador);
-    dibujarEtiquetas(datos, config);
-    dibujarLeyenda(config);
-
-    setTimeout(() => { eventBlocker.remove(); }, 1050);
+    dibujarUmbrales(config);
   }
 
   function dibujarBarras(datos, config, indicador) {
-    const t = svg.transition().duration(800);
-    const bars = svg.selectAll(".bar").data(datos, d => d.unidad);
-
-    bars.exit().transition(t).attr("width", 0).style("opacity", 0).remove();
-
-    bars.enter()
-      .append("rect")
-      .attr("class", "bar")
-      .attr("fill", d => calcularColor(d.valor, config))
-      .attr("x", 0)
-      .attr("height", yScale.bandwidth())
-      .attr("y", d => yScale(d.unidad))
-      .attr("width", 0)
-      .style("cursor", "pointer")
-      .on("mouseover", (event, d) => mostrarTooltip(event, d, indicador, config))
-      .on("mouseout", ocultarTooltip)
-      .on("click", (event, d) => mostrarGraficoHistorico(d.unidad, selectedYear, selectedMonth))
-      .merge(bars)
-      .transition(t)
-        .attr("y", d => yScale(d.unidad))
-        .attr("height", yScale.bandwidth())
-        .attr("width", d => xScale(Math.max(0, d.valor)))
-        .attr("fill", d => calcularColor(d.valor, config));
-  }
-
-  function dibujarEtiquetas(datos, config) {
-    const numDecimales = config?.decimales ?? 1;
-    const labels = svg.selectAll(".label").data(datos, d => d.unidad);
-
-    labels.exit().transition().duration(300).attr("x", 0).style("opacity", 0).remove();
-
-    labels.enter()
-      .append("text")
-      .attr("class", "label")
+    const decimales = config.decimales ?? 1;
+    const abrirHistorico = (event, d) => {
+      ocultarTooltip();
+      historicalTrigger = event.currentTarget;
+      mostrarGraficoHistorico(d.unidad, selectedYear, selectedMonth);
+    };
+    const bars = svg.selectAll(".indicator-bar").data(datos).join("rect")
+      .attr("class", "indicator-bar performance-fill")
+      .attr("data-performance", d => estadoVisual(d.valor, config).key ?? null)
+      .attr("x", 0).attr("y", d => yScale(d.unidad))
+      .attr("height", yScale.bandwidth()).attr("width", d => xScale(Math.max(0, d.valor)))
+      .attr("role", "button").attr("tabindex", 0)
+      .attr("aria-label", d => {
+        const status = estadoVisual(d.valor, config);
+        return `Ver histórico de ${d.unidad}. Valor ${d.valor.toFixed(decimales)}. ${status?.label || ""}`;
+      })
+      .on("pointerenter focus", (event, d) => mostrarTooltip(event, d, indicador, config))
+      .on("pointerleave blur", ocultarTooltip)
+      .on("click", abrirHistorico)
+      .on("keydown", (event, d) => {
+        if (event.key === "Escape") ocultarTooltip();
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        abrirHistorico(event, d);
+      });
+    bars.append("title").text(d => d.unidad);
+    svg.selectAll(".indicator-value").data(datos).join("text")
+      .attr("class", "indicator-value")
+      .attr("x", d => xScale(Math.max(0, d.valor)) + 6)
       .attr("y", d => yScale(d.unidad) + yScale.bandwidth() / 2)
       .attr("dy", "0.35em")
-      .style("font-family", "Montserrat, sans-serif")
-      .style("font-size", datos.length > 30 ? "9px" : "11px")
-      .style("font-weight", "600").style("fill", "#333")
-      .style("opacity", 0).attr("x", 0)
-    .merge(labels)
-      .transition().duration(800).delay(200)
-      .attr("x", d => xScale(Math.max(0, d.valor)) + 5)
-      .attr("y", d => yScale(d.unidad) + yScale.bandwidth() / 2)
-      .text(d => d.valor.toFixed(numDecimales))
-      .style("opacity", 1);
+      .text(d => {
+        const status = estadoVisual(d.valor, config);
+        return d.valor.toFixed(decimales) + (status.symbol ? " " + status.symbol : "") + " · " + status.label;
+      });
   }
 
   function crearEscalas(datos) {
@@ -235,14 +282,14 @@ document.addEventListener('DOMContentLoaded', function () {
     xScale = d3.scaleLinear().domain([0, d3.max(datos, d => d.valor) * 1.1 || 10]).range([0, width]).nice();
   }
 
-  function dibujarEjes(datos) {
+  function dibujarEjes() {
     svg.selectAll(".x-axis, .y-axis").remove();
     svg.append("g").attr("class", "x-axis axis").attr("transform", `translate(0,${height})`)
       .call(d3.axisBottom(xScale).ticks(Math.min(10, Math.floor(width / 80))).tickSizeOuter(0))
-      .selectAll("text").style("font-family", "Montserrat, sans-serif").style("font-size", "11px");
+      .selectAll("text").attr("class", "unit-axis-label");
     svg.append("g").attr("class", "y-axis axis").call(d3.axisLeft(yScale).tickSize(0).tickPadding(10))
-      .selectAll("text").style("font-family", "Montserrat, sans-serif")
-      .style("font-size", () => datos.length > 35 ? "8px" : datos.length > 25 ? "9px" : datos.length > 15 ? "10px" : "11px")
+      .selectAll("text")
+      .attr("class", "unit-axis-label")
       .call(truncarTexto, margin.left - 25);
   }
 
@@ -260,415 +307,332 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /**
-   * Cálculo de color de barra basado en el tipo de evaluación del indicador.
-   * El resolveConfig ya nos entrega backgroundColors en el orden correcto
-   * según el tipo (mayor_es_mejor / menor_es_mejor / intervalo_optimo), así
-   * que este código no tiene que conocer la semántica del indicador.
-   */
-  function calcularColor(valor, config) {
-    if (!config || !config.backgroundColors ||
-        config.umbralSuperior === undefined || config.umbralInferior === undefined) {
-      return "#007bff";
-    }
-    // Caso especial: indicadores con valor mínimo rojo (productividad enfermería)
-    if (config.valorMinimoRojo !== undefined) {
-      if (valor <= config.valorMinimoRojo || valor > config.umbralSuperior) return config.backgroundColors[0];
-      if (valor > config.valorMinimoRojo && valor < config.umbralInferior) return config.backgroundColors[2];
-      return config.backgroundColors[1];
-    }
-    if (valor > config.umbralSuperior) return config.backgroundColors[0];
-    if (valor >= config.umbralInferior) return config.backgroundColors[1];
-    return config.backgroundColors[2];
-  }
-
   function dibujarUmbrales(config) {
-    svg.selectAll(".umbral-superior, .umbral-inferior, .umbral-label").remove();
-    if (!config) return;
-    if (config.umbralSuperior != null && xScale(config.umbralSuperior) >= 0) {
-      svg.append("line").attr("class", "umbral-superior")
-        .attr("x1", xScale(config.umbralSuperior)).attr("x2", xScale(config.umbralSuperior))
-        .attr("y1", -10).attr("y2", height + 10)
-        .attr("stroke", config.colorSuperior || "#e74c3c").attr("stroke-width", 1.5).attr("stroke-dasharray", "4 3");
-      svg.append("text").attr("class", "umbral-label")
-        .attr("x", xScale(config.umbralSuperior)).attr("y", -15).attr("text-anchor", "middle")
-        .style("font-family", "Montserrat, sans-serif").style("font-size", "10px")
-        .style("fill", config.colorSuperior || "#e74c3c").text(`Sup: ${config.umbralSuperior}`);
-    }
-    if (config.umbralInferior != null && xScale(config.umbralInferior) >= 0) {
-      svg.append("line").attr("class", "umbral-inferior")
-        .attr("x1", xScale(config.umbralInferior)).attr("x2", xScale(config.umbralInferior))
-        .attr("y1", -10).attr("y2", height + 10)
-        .attr("stroke", config.colorInferior || "#f39c12").attr("stroke-width", 1.5).attr("stroke-dasharray", "5 5");
-      svg.append("text").attr("class", "umbral-label")
-        .attr("x", xScale(config.umbralInferior)).attr("y", -15).attr("text-anchor", "middle")
-        .style("font-family", "Montserrat, sans-serif").style("font-size", "10px")
-        .style("fill", config.colorInferior || "#f39c12").text(`Inf: ${config.umbralInferior}`);
+    const thresholds = [
+      [config.umbralSuperior, config.colorSuperior || "#e74c3c", "4 3"],
+      [config.umbralInferior, config.colorInferior || "#f39c12", "5 5"]
+    ];
+    for (const [value, color, dash] of thresholds) {
+      if (value == null || value < 0 || value > xScale.domain()[1]) continue;
+      svg.append("line").attr("class", "indicator-threshold")
+        .attr("x1", xScale(value)).attr("x2", xScale(value))
+        .attr("y1", 0).attr("y2", height)
+        .attr("stroke", color).attr("stroke-width", 1.5).attr("stroke-dasharray", dash);
     }
   }
 
   function dibujarLeyenda(config) {
-    svg.selectAll(".leyenda-container").remove();
-    if (!config || !config.backgroundColors ||
-        config.umbralSuperior === undefined || config.umbralInferior === undefined) return;
-
-    // Las etiquetas dependen del tipo de evaluación, que ya viene resuelto.
-    const altoTxt  = config.etiquetaAlto  || `> ${config.umbralSuperior}`;
-    const medioTxt = config.etiquetaMedio || `${config.umbralInferior} - ${config.umbralSuperior}`;
-    const bajoTxt  = config.etiquetaBajo  || `< ${config.umbralInferior}`;
-
-    const leyendaData = [
-      { color: config.backgroundColors[0], text: altoTxt  + ` (>${config.umbralSuperior})` },
-      { color: config.backgroundColors[1], text: medioTxt + ` (${config.umbralInferior}-${config.umbralSuperior})` },
-      { color: config.backgroundColors[2], text: bajoTxt  + ` (<${config.umbralInferior})` }
-    ];
-    const legend = svg.append("g").attr("class", "leyenda-container").attr("transform", `translate(${width + 20}, 20)`);
-    leyendaData.forEach((d, i) => {
-      const item = legend.append("g").attr("transform", `translate(0, ${i * 25})`);
-      item.append("rect").attr("width", 16).attr("height", 16).attr("fill", d.color).attr("rx", 3).attr("ry", 3)
-        .style("stroke", "#ccc").style("stroke-width", 0.5);
-      item.append("text").attr("x", 22).attr("y", 12)
-        .style("font-family", "Montserrat, sans-serif").style("font-size", "10px").style("fill", "#2c3e50")
-        .text(d.text);
-    });
+    for (const state of leyendaUmbrales(config)) {
+      const item = legend.append("li");
+      mostrarEstado(item, state);
+      item.append("span").text("(" + state.limits + ")");
+    }
+    if (config.umbralInferior != null && config.umbralSuperior != null) {
+      legend.append("li").attr("class", "threshold-summary")
+        .text(`Umbral inferior ${config.umbralInferior} · Umbral superior ${config.umbralSuperior}`);
+    }
   }
 
   function mostrarTooltip(event, d, indicador, config) {
-    d3.select(event.currentTarget).transition().duration(150).style("opacity", 0.7);
-    const numDecimales = config?.decimales ?? 1;
-    tooltip.html(
-      `<div style="font-weight:bold; margin-bottom:5px; border-bottom: 1px solid #555; padding-bottom:5px;">${d.unidad}</div>` +
-      `<div style="font-size:0.9em;">${labelDe(indicador)}</div>` +
-      `Valor: <span style="font-weight:bold; font-size:1.1em;">${d.valor.toFixed(numDecimales)}</span>`
-    )
-      .style("left", `${event.pageX + 15}px`).style("top", `${event.pageY - 20}px`)
-      .transition().duration(150).style("opacity", 0.95);
+    const status = estadoVisual(d.valor, config);
+    tooltip.html('').attr("hidden", null);
+    tooltip.append("strong").text(d.unidad);
+    tooltip.append("div").text(labelDe(indicador));
+    tooltip.append("div").text(`Valor ${d.valor.toFixed(config.decimales ?? 1)}${status ? " · " + status.label : ""}`);
+    posicionarTooltip(tooltip.node(), event);
   }
 
-  function ocultarTooltip(event) {
-    d3.select(event.currentTarget).transition().duration(150).style("opacity", 1);
-    tooltip.transition().duration(150).style("opacity", 0);
+  function ocultarTooltip() {
+    tooltip.attr("hidden", "");
   }
 
-  // ===========================================================================
-  // CARGA DE TABS Y SIDEBAR
-  // ===========================================================================
+  // ===== Filtros y catálogo =====
+  yearTabs.addEventListener("change", () => {
+    selectedYear = yearTabs.value;
+    selectedMonth = null;
+    cerrarGraficoHistorico(false);
+    selector.reset();
+    cargarMeses();
+  });
+  monthTabs.addEventListener("change", () => {
+    selectedMonth = monthTabs.value;
+    cerrarGraficoHistorico(false);
+    selector.reset();
+    cargarIndicadores();
+  });
+  function chooseIndicator(key, view = activeView === 'mapa' ? 'mapa' : activeView === 'historial' ? returnView : 'indicador') {
+    selectedIndicatorClave = key;
+    selector.reset();
+    cerrarGraficoHistorico(false);
+    activeView = view;
+    actualizarGrafico();
+  }
+
+  unitSelect.addEventListener('change', () => {
+    overviewUnit = unitSelect.value;
+    actualizarGrafico();
+  });
+  categorySelect.addEventListener('change', () => {
+    activeCategory = categorySelect.value;
+    selector.reset();
+    cerrarGraficoHistorico(false);
+    actualizarGrafico();
+  });
+  for (const button of viewButtons) button.addEventListener('click', () => {
+    cerrarGraficoHistorico(false);
+    activeView = button.dataset.view;
+    selector.reset();
+    actualizarGrafico();
+  });
+
+  resetFilters.addEventListener('click', () => {
+    selectedYear = defaultPeriod?.year;
+    selectedMonth = defaultPeriod?.month;
+    selectedIndicatorClave = null;
+    overviewUnit = null;
+    activeCategory = '';
+    selector.reset();
+    cerrarGraficoHistorico(false);
+    cargarAnos();
+    yearTabs.focus();
+  });
+
+  function renderOverview() {
+    const indicators = getActiveIndicators(selectedYear, selectedMonth);
+    const available = datosProductividad[selectedYear]?.[selectedMonth] || [];
+    const units = available.map(row => row.unidad);
+    if (!units.includes(overviewUnit)) {
+      overviewUnit = units.find(unit => /delegacional/i.test(unit)) || units[0] || null;
+    }
+    cargarSelector(unitSelect, units, overviewUnit);
+    guardarHash({ unidad: overviewUnit });
+    syncReset();
+    const unit = available.find(row => row.unidad === overviewUnit);
+    const manual = pickManual(selectedYear, selectedMonth);
+    document.getElementById('overviewPeriod').textContent = selectedMonth ? selectedMonth + ' ' + selectedYear : 'Sin periodo';
+    const table = d3.select('#overviewTable').html('').append('table').attr('class', 'data-table overview-table');
+    const headings = ['Indicador', 'Valor', 'Valor de referencia', 'Metodología', 'Desempeño'];
+    table.append('thead').append('tr').selectAll('th').data(headings).join('th').attr('scope', 'col').text(d => d);
+    const results = indicators.filter(ind => !activeCategory || ind.grupo === activeCategory).map(indicator => {
+      const config = resolveConfig(selectedYear, selectedMonth, indicator.idx);
+      const value = unit?.indicador?.[indicator.idx];
+      return { indicator, config, value, state: estadoVisual(value, config) };
+    });
+    const rows = table.append('tbody').selectAll('tr').data(results).join('tr');
+    rows.append('th').attr('scope', 'row').append('button').attr('type', 'button').attr('class', 'text-button')
+      .text(d => labelDe(d.indicator)).on('click', (_, d) => {
+        chooseIndicator(d.indicator.clave, 'indicador');
+        document.getElementById('tituloGrafica').focus();
+      });
+    rows.append('td').attr('class', 'numeric').text(({ value, config }) =>
+      Number.isFinite(value) ? value.toFixed(config?.decimales ?? 1) : '–');
+    const references = rows.append('td').attr('class', 'overview-reference');
+    references.append('span').text(({ config }) => referenciaVisible(config));
+    references.filter(({ indicator }) => manual === '2025' && fichasMMIM2025[indicator.clave])
+      .append('small').text(({ indicator }) => 'Meta MMIM ' + fichasMMIM2025[indicator.clave].meta);
+    rows.append('td').attr('class', 'overview-pending').text('Pendiente');
+    rows.append('td').attr('class', 'overview-performance').each(function ({ state }) {
+      mostrarEstado(d3.select(this), state);
+    });
+  }
+
+  function mostrarEstado(container, state) {
+    const badge = container.append('span').attr('class', 'performance-badge').attr('data-performance', state.key ?? null);
+    badge.append('span').attr('class', 'performance-mark').attr('aria-hidden', 'true');
+    if (state.symbol) {
+      badge.append('span').attr('aria-hidden', 'true').text(state.symbol);
+      badge.append('span').attr('class', 'visually-hidden').text(state.direction + ' · ');
+    }
+    badge.append('span').text(state.label);
+  }
 
   function cargarAnos() {
-    yearTabs.innerHTML = "";
     const years = Object.keys(datosProductividad).sort((a, b) => parseInt(b) - parseInt(a));
-    if (years.length === 0) { console.error("No hay años en datosProductividad."); return; }
-
-    years.forEach((año, i) => {
-      const li = document.createElement("li");
-      li.textContent = año; li.dataset.year = año;
-      if (i === 0 && !selectedYear) { selectedYear = año; }
-      if (año === selectedYear) { li.classList.add("active"); }
-      li.addEventListener("click", () => {
-        yearTabs.querySelectorAll("li").forEach(x => x.classList.remove("active"));
-        li.classList.add("active");
-        selectedYear = año;
-        selectedMonth = null;
-        cargarMeses();
-      });
-      yearTabs.appendChild(li);
-    });
-    if (!selectedYear && years.length > 0) selectedYear = years[0];
+    if (!years.includes(selectedYear) && years.length > 0) selectedYear = years[0];
+    cargarSelector(yearTabs, years, selectedYear);
     cargarMeses();
   }
 
   function cargarMeses() {
-    monthTabs.innerHTML = "";
-    if (!selectedYear || !datosProductividad[selectedYear]) {
-      selectedMonth = null;
-      cargarIndicadores();
-      return;
+    const months = Object.keys(datosProductividad[selectedYear] || {})
+      .sort((a, b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
+    if (!selectedMonth || !months.includes(selectedMonth)) {
+      selectedMonth = months[months.length - 1] ?? null;
     }
-    const mesesObj = datosProductividad[selectedYear];
-    const sortedMeses = Object.keys(mesesObj).sort((a, b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b));
-    if (sortedMeses.length === 0) { selectedMonth = null; cargarIndicadores(); return; }
-    if (!selectedMonth || !sortedMeses.includes(selectedMonth)) {
-      selectedMonth = sortedMeses[sortedMeses.length - 1];
-    }
-    sortedMeses.forEach((mes) => {
-      const li = document.createElement("li");
-      li.textContent = mes; li.dataset.mes = mes;
-      if (mes === selectedMonth) { li.classList.add("active"); }
-      li.addEventListener("click", () => {
-        monthTabs.querySelectorAll("li").forEach(x => x.classList.remove("active"));
-        li.classList.add("active");
-        selectedMonth = mes;
-        cargarIndicadores();
-      });
-      monthTabs.appendChild(li);
-    });
+    cargarSelector(monthTabs, months, selectedMonth);
     cargarIndicadores();
   }
 
-  /**
-   * Reconstruye el sidebar de indicadores con base en el catálogo APLICABLE
-   * al periodo seleccionado. Llamada cada vez que cambia (año, mes), porque
-   * el cambio podría haber cruzado la frontera Ago/Sep 2025 y traído otro manual.
-   */
   function cargarIndicadores() {
-    indicadorList.innerHTML = "";
-    if (!selectedYear || !selectedMonth) {
-      actualizarGrafico();
-      return;
-    }
-
-    const activos = getActiveIndicators(selectedYear, selectedMonth);
-    const versionLabel = pickManual(selectedYear, selectedMonth);
-
-    // Encabezado discreto que indica qué MMIM se está usando.
-    // No requiere cambios en HTML porque se inserta como <li> deshabilitado.
-    const header = document.createElement("li");
-    header.textContent = `MMIM ${versionLabel} — ${activos.length} indicador${activos.length !== 1 ? 'es' : ''}`;
-    header.style.fontWeight = "700";
-    header.style.fontSize = "0.75em";
-    header.style.color = "#7f8c8d";
-    header.style.cursor = "default";
-    header.style.padding = "8px 10px";
-    header.style.background = "#ecf0f1";
-    header.style.borderRadius = "4px";
-    header.style.marginBottom = "6px";
-    header.style.pointerEvents = "none";
-    indicadorList.appendChild(header);
-
-    // Si la clave previa ya no está en este catálogo, caer al primero activo.
-    if (selectedIndicatorClave) {
-      const stillExists = activos.find(a => a.clave === selectedIndicatorClave);
-      if (!stillExists) selectedIndicatorClave = null;
-    }
-    if (!selectedIndicatorClave && activos.length > 0) {
-      selectedIndicatorClave = activos[0].clave;
-    }
-
-    activos.forEach((ind) => {
-      const li = document.createElement("li");
-      li.textContent = labelDe(ind);
-      li.dataset.clave = ind.clave;
-      li.dataset.idx = ind.idx;
-      if (ind.clave === selectedIndicatorClave) { li.classList.add("active"); }
-      li.addEventListener("click", () => {
-        indicadorList.querySelectorAll("li").forEach(x => x.classList.remove("active"));
-        li.classList.add("active");
-        selectedIndicatorClave = ind.clave;
-        actualizarGrafico();
-        if (historicalChartMainContainer.style("display") !== "none") {
-          cerrarGraficoHistorico();
-        }
-      });
-      indicadorList.appendChild(li);
-    });
+    const activos = selectedYear && selectedMonth ? getActiveIndicators(selectedYear, selectedMonth) : [];
+    const versionLabel = selectedMonth ? pickManual(selectedYear, selectedMonth) : null;
+    d3.select("#manualLabel").text(versionLabel
+      ? `MMIM ${versionLabel} · ${activos.length} indicador${activos.length !== 1 ? 'es' : ''}`
+      : "");
+    const groups = [...new Set(activos.map(ind => ind.grupo).filter(Boolean))];
+    if (!groups.includes(activeCategory)) activeCategory = '';
+    cargarSelector(categorySelect, [{ value: '', label: 'Todas las categorías' }, ...groups], activeCategory);
+    categorySelect.disabled = !groups.length;
+    document.getElementById('indicatorCategoryHelp').hidden = groups.length > 0;
     actualizarGrafico();
   }
 
-  // ===========================================================================
-  // GRÁFICA HISTÓRICA
-  // ===========================================================================
-
-  /**
-   * Construye los datos históricos para una unidad. Recorre todos los años y meses
-   * disponibles, y para cada uno determina:
-   *   - Qué manual aplica (vía pickManual)
-   *   - Qué índice tiene la CLAVE del indicador seleccionado en ese manual
-   *   - El valor numérico en JSONprod.indicador[idx]
-   *
-   * Si en un periodo dado el indicador no existe en ese manual (o no está activo),
-   * ese mes simplemente no se incluye en la serie.
-   */
-  function getHistoricalData(unitName, clave, allProdData) {
-    const historicalValues = [];
-    const availableYears = Object.keys(allProdData).sort((a, b) => parseInt(a) - parseInt(b));
-
-    availableYears.forEach(year => {
-      const monthsInYearData = allProdData[year];
-      if (!monthsInYearData) return;
-
-      MONTH_ORDER.forEach(monthName => {
-        if (!monthsInYearData[monthName]) return;
-
-        // En cada periodo, resolvemos contra SU PROPIO manual.
-        const indEnPeriodo = findIndicatorByClave(year, monthName, clave);
-        if (!indEnPeriodo) return; // no existe en ese manual
-
-        const idxEnPeriodo = indEnPeriodo.idx;
-        const unitDataObject = monthsInYearData[monthName].find(u => u.unidad === unitName);
-        if (!unitDataObject || !unitDataObject.indicador) return;
-        if (unitDataObject.indicador[idxEnPeriodo] === undefined) return;
-
-        historicalValues.push({
-          periodoDisplay: `${monthName.substring(0, 3)} ${year.slice(-2)}`,
-          valor: unitDataObject.indicador[idxEnPeriodo],
-          originalYear: year,
-          originalMonth: monthName,
-          originalIndex: historicalValues.length,
-          // Guardamos también qué clave/idx aplicó en este punto, por trazabilidad
-          claveAplicada: clave,
-          idxAplicado: idxEnPeriodo
-        });
-      });
-    });
-    return historicalValues;
-  }
-
-  function mostrarGraficoHistorico(unitName, yearOfContext, monthOfContext) {
-    const indicador = getSelectedIndicator();
-    if (!indicador) return;
-
-    currentHistoricalData = getHistoricalData(unitName, indicador.clave, datosProductividad);
-    if (currentHistoricalData.length === 0) {
-      alert(`No hay datos históricos para ${unitName} en "${labelDe(indicador)}".`);
-      return;
+  function renderHeatmap(indicator) {
+    const tableRoot = d3.select('#heatmapTable').html('');
+    if (!indicator) return;
+    const manual = pickManual(selectedYear, selectedMonth);
+    document.getElementById('heatmapCode').textContent = indicator.clave;
+    document.getElementById('heatmapName').textContent = indicator.nombre;
+    const legend = d3.select('#heatmapLegend').html('');
+    for (const [key, label] of Object.entries(estados)) {
+      mostrarEstado(legend.append('li'), { key, label: key === 'sinDato' ? label + ' (–)' : label });
     }
-
-    productividadChartContainer.style("display", "none");
-    historicalChartMainContainer.style("display", "block");
-    historicalChartTitle.text(`Historial: ${labelDe(indicador)} — ${unitName}`);
-
-    let initialIndex = currentHistoricalData.length - 1;
-    const foundIndex = currentHistoricalData.findIndex(
-      d => d.originalYear === yearOfContext && d.originalMonth === monthOfContext
-    );
-    if (foundIndex !== -1) {
-      initialIndex = foundIndex;
-    } else {
-      for (let i = currentHistoricalData.length - 1; i >= 0; i--) {
-        if (currentHistoricalData[i].originalYear === yearOfContext) {
-          initialIndex = i; break;
-        }
+    legend.append('li').text('▲ Por encima de la referencia · ▼ Por debajo · = Igual · ● Dentro del intervalo');
+    legend.append('li').text('N/C Otra definición');
+    const units = [...new Set(periods.flatMap(({ year, month }) => datosProductividad[year][month].map(row => row.unidad)))];
+    const table = tableRoot.append('table').attr('class', 'data-table heatmap');
+    const head = table.append('thead').append('tr');
+    head.append('th').attr('scope', 'col').text('Unidad');
+    const columns = head.selectAll('.heatmap-month').data(periods).join('th').attr('scope', 'col').attr('class', 'heatmap-month');
+    columns.text(d => d.month.slice(0, 3) + ' ' + d.year.slice(-2));
+    columns.filter((d, i) => i === 0 || d.month === 'Enero' || pickManual(d.year, d.month) !== pickManual(periods[i - 1].year, periods[i - 1].month))
+      .classed('manual-boundary', true).append('small').text(d => 'MMIM ' + pickManual(d.year, d.month));
+    const rows = table.append('tbody').selectAll('tr').data(units).join('tr')
+      .classed('heatmap-delegation', unit => /^delegaci[oó]n(?:al)?$/i.test(unit));
+    const open = (event, unit, year, month) => {
+      historicalTrigger = event.currentTarget;
+      mostrarGraficoHistorico(unit, year, month);
+    };
+    rows.append('th').attr('scope', 'row').append('button').attr('type', 'button').attr('class', 'text-button heatmap-unit')
+      .text(d => d).on('click', (event, unit) => open(event, unit, selectedYear, selectedMonth));
+    rows.selectAll('td').data(unit => seriePorUnidad(datosProductividad, periods, unit, indicator.clave, manual)
+      .map(point => ({ ...point, unit }))).join('td').each(function (point, index) {
+      const cell = d3.select(this);
+      if (index > 0 && point.manual !== pickManual(periods[index - 1].year, periods[index - 1].month)) cell.classed('manual-boundary', true);
+      const periodLabel = point.unit + ', ' + point.month.toLocaleLowerCase('es-MX') + ' ' + point.year + ': ';
+      if (point.value == null) {
+        const reason = point.otraDefinicion ? 'Otra definición del indicador' : 'Sin dato';
+        cell.attr('aria-label', periodLabel + reason).attr('data-performance', 'sinDato');
+        cell.append('span').attr('class', 'heatmap-empty').attr('title', reason)
+          .text(point.otraDefinicion ? 'N/C' : '–');
+        return;
       }
-    }
-
-    if (timeSlider.node()) {
-      timeSlider.node().min = 0;
-      timeSlider.node().max = currentHistoricalData.length > 0 ? currentHistoricalData.length - 1 : 0;
-      timeSlider.node().value = initialIndex;
-    }
-    dibujarGraficoHistoricoD3(currentHistoricalData);
-    actualizarPuntoDeslizanteYBotones(initialIndex);
+      const state = estadoVisual(point.value, point.config);
+      const value = point.value.toFixed(point.config?.decimales ?? 1);
+      const description = [periodLabel + value, state.direction, state.label].filter(Boolean).join(', ');
+      cell.attr('aria-label', description);
+      const button = cell.append('button').attr('type', 'button').attr('class', 'heatmap-cell')
+        .attr('data-performance', state.key ?? null)
+        .attr('aria-label', description)
+        .on('click', event => open(event, point.unit, point.year, point.month));
+      button.append('span').attr('class', 'heatmap-cell-value').text([value, state.symbol].filter(Boolean).join(' '));
+      button.append('small').text(state.label);
+    });
   }
 
-  function dibujarGraficoHistoricoD3(hData) {
-    historicalChartDiv.html('');
-    if (hData.length === 0) {
-      historicalChartDiv.append("p").text("No hay datos para graficar.")
-        .style("text-align", "center").style("padding-top", "50px");
-      return;
-    }
-    historicalSvg = historicalChartDiv.append("svg")
-      .attr("width", hWidth + hMargin.left + hMargin.right)
-      .attr("height", hHeight + hMargin.top + hMargin.bottom)
-      .append("g").attr("transform", `translate(${hMargin.left},${hMargin.top})`);
+  function mostrarGraficoHistorico(unitName, year, month) {
+    if (!getSelectedIndicator()) return;
+    returnView = activeView === 'mapa' ? 'mapa' : 'indicador';
+    historyUnit = unitName;
+    historyPeriod = clavePeriodo({ year, month });
+    activeView = 'historial';
+    actualizarGrafico();
+    historicalChartTitle.node().focus();
+  }
 
-    xHistoricalScale = d3.scalePoint().domain(hData.map(d => d.periodoDisplay)).range([0, hWidth]).padding(0.5);
-    const yMin = d3.min(hData, d => d.valor); const yMax = d3.max(hData, d => d.valor);
-    yHistoricalScale = d3.scaleLinear()
-      .domain([(yMin !== undefined ? yMin * 0.9 : 0), (yMax !== undefined ? yMax * 1.1 : 10)])
-      .range([hHeight, 0]).nice();
-
-    historicalSvg.append("g").attr("transform", `translate(0,${hHeight})`)
-      .call(d3.axisBottom(xHistoricalScale).tickSizeOuter(0))
-      .selectAll("text").style("text-anchor", "end")
-      .attr("dx", "-.8em").attr("dy", ".15em").attr("transform", "rotate(-45)")
-      .style("font-size", hData.length > 15 ? "8px" : (hData.length > 10 ? "9px" : "10px"));
-    historicalSvg.append("g").call(d3.axisLeft(yHistoricalScale));
-
-    historicalLine = d3.line()
-      .x(d => xHistoricalScale(d.periodoDisplay))
-      .y(d => yHistoricalScale(d.valor))
-      .defined(d => d.valor != null && !isNaN(d.valor))
-      .curve(d3.curveMonotoneX);
-    historicalSvg.append("path")
-      .datum(hData.filter(d => d.valor != null && !isNaN(d.valor)))
-      .attr("fill", "none").attr("stroke", "#007bff").attr("stroke-width", 2.5)
-      .attr("d", historicalLine);
-
-    // Cada punto se colorea con el config que le toca según SU propio periodo y manual.
-    historicalSvg.selectAll(".hist-data-point")
-      .data(hData.filter(d => d.valor != null && !isNaN(d.valor)))
-      .enter().append("circle").attr("class", "hist-data-point")
-      .attr("cx", d => xHistoricalScale(d.periodoDisplay))
-      .attr("cy", d => yHistoricalScale(d.valor))
-      .attr("r", 3.5)
-      .attr("fill", d => {
-        const pointConfig = resolveConfig(d.originalYear, d.originalMonth, d.idxAplicado) || {};
-        return calcularColor(d.valor, pointConfig);
-      })
-      .attr("stroke", "#fff").attr("stroke-width", 1);
-
-    slidingDot = historicalSvg.append("circle").attr("class", "sliding-dot")
-      .attr("r", 7).attr("stroke", "#333").attr("stroke-width", 2).style("opacity", 0);
+  function renderHistory(indicator) {
+    if (!indicator || !historyUnit) return;
+    const manual = pickManual(selectedYear, selectedMonth);
+    currentHistoricalData = seriePorUnidad(datosProductividad, periods, historyUnit, indicator.clave, manual);
+    const index = currentHistoricalData.findIndex(point => point.key === historyPeriod);
+    const slider = timeSlider.node();
+    slider.max = Math.max(0, currentHistoricalData.length - 1);
+    closeHistoricalChartButton.text(returnView === 'mapa' ? 'Volver al mapa de calor' : 'Volver a gráficas por indicador');
+    historicalChartTitle.text(`${labelDe(indicator)} · ${historyUnit}`);
+    actualizarPuntoDeslizanteYBotones(index < 0 ? currentHistoricalData.length - 1 : index);
   }
 
   function actualizarPuntoDeslizanteYBotones(index) {
-    if (!currentHistoricalData || currentHistoricalData.length === 0) {
-      sliderValueLabel.text("N/A");
-      if (slidingDot) slidingDot.style("opacity", 0);
-      prevButton.property("disabled", true);
-      nextButton.property("disabled", true);
-      return;
-    }
-    index = Math.max(0, Math.min(index, currentHistoricalData.length - 1));
-    if (timeSlider.node()) timeSlider.node().value = index;
-
-    const dataPoint = currentHistoricalData[index];
-    if (!dataPoint) {
-      if (slidingDot) slidingDot.style("opacity", 0);
-      sliderValueLabel.text("Error: dato no encontrado");
-      prevButton.property("disabled", true);
-      nextButton.property("disabled", true);
-      return;
-    }
-
-    // Resolvemos config con el periodo del propio punto (no el seleccionado en pantalla).
-    // ESTO ARREGLA EL BUG: antes usaba `d.originalMonth` que no existía en el scope.
-    const pointConfig = resolveConfig(dataPoint.originalYear, dataPoint.originalMonth, dataPoint.idxAplicado) || {};
-    const numDecimales = pointConfig.decimales ?? 1;
-
-    if (dataPoint.valor !== null && !isNaN(dataPoint.valor) && xHistoricalScale && yHistoricalScale && slidingDot) {
-      const cx = xHistoricalScale(dataPoint.periodoDisplay);
-      const cy = yHistoricalScale(dataPoint.valor);
-      const dotColor = calcularColor(dataPoint.valor, pointConfig);
-      if (cx !== undefined && cy !== undefined && !isNaN(cx) && !isNaN(cy)) {
-        slidingDot.attr("cx", cx).attr("cy", cy).attr("fill", dotColor).style("opacity", 1);
-        sliderValueLabel.text(`${dataPoint.periodoDisplay}: ${dataPoint.valor.toFixed(numDecimales)}`);
-      } else {
-        slidingDot.style("opacity", 0);
-        sliderValueLabel.text("Error pos.");
-      }
-    } else {
-      if (slidingDot) slidingDot.style("opacity", 0);
-      sliderValueLabel.text(dataPoint ? `${dataPoint.periodoDisplay}: N/D` : "N/A");
-    }
-    prevButton.property("disabled", index === 0);
-    nextButton.property("disabled", index === (currentHistoricalData.length - 1));
+    const point = currentHistoricalData[index];
+    if (!point) return;
+    timeSlider.node().value = index;
+    prevButton.property('disabled', index === 0);
+    nextButton.property('disabled', index >= currentHistoricalData.length - 1);
+    historyPeriod = point.key;
+    guardarHash({ corteHist: point.key });
+    const digits = point.config?.decimales ?? 1;
+    const state = point.value == null ? null : estadoVisual(point.value, point.config || {});
+    const value = point.value?.toFixed(digits) ?? (point.otraDefinicion ? 'Otra definición' : 'Sin información');
+    sliderValueLabel.text(`${point.label} · ${value}${state ? ' · ' + state.label : ''}`);
+    const selected = getSelectedIndicator();
+    const official = point.manual === '2025' && !point.otraDefinicion ? fichasMMIM2025[selected.clave] : null;
+    const limits = referenciaOperativa(point.config);
+    const operational = limits.length ? limits.join(' a ') : 'Sin referencia';
+    d3.select('#historicalReference').text(`MMIM ${point.manual} · Referencia operativa ${operational}${official ? ' · Meta oficial ' + official.meta + ' · ' + official.periodicidad : ''}`);
+    const signed = delta => delta == null ? 'No comparable' : (delta > 0 ? '+' : '') + delta.toFixed(digits);
+    const difference = brecha(point);
+    const chips = [
+      ['Vs. mes anterior', signed(variacion(point, currentHistoricalData, 1))],
+      ['Vs. mismo mes del año anterior', signed(variacion(point, currentHistoricalData, 12))],
+      ['Brecha operativa', difference == null ? 'Sin referencia comparable' : signed(difference)]
+    ];
+    const items = d3.select('#historyChips').html('').selectAll('div').data(chips).join('div');
+    items.append('dt').text(d => d[0]);
+    items.append('dd').text(d => d[1]);
+    dibujarHistorial(historicalChartDiv.node(), currentHistoricalData, point);
   }
 
-  function cerrarGraficoHistorico() {
-    historicalChartMainContainer.style("display", "none");
-    productividadChartContainer.style("display", "block");
-    historicalChartDiv.html('');
-    currentHistoricalData = [];
+  function cerrarGraficoHistorico(restoreFocus) {
+    if (activeView !== 'historial') return;
+    activeView = returnView;
+    historyUnit = null;
+    historyPeriod = null;
+    if (restoreFocus) {
+      const trigger = historicalTrigger?.__data__;
+      actualizarGrafico();
+      const candidates = activeView === 'mapa' ? document.querySelectorAll('#heatmapTable button') :
+        document.querySelectorAll('#productividadChart .indicator-bar');
+      const target = [...candidates].find(element => {
+        const datum = element.__data__;
+        if (trigger?.key) return datum?.unit === trigger.unit && datum?.key === trigger.key;
+        return (datum?.unidad ?? datum) === (trigger?.unidad ?? trigger);
+      });
+      (target || (activeView === 'mapa' ? document.getElementById('heatmapTable') : chartContainer.node())).focus();
+    }
   }
 
-  // ===========================================================================
-  // EVENTOS GLOBALES
-  // ===========================================================================
+  timeSlider.on('input', function () { actualizarPuntoDeslizanteYBotones(+this.value); });
+  closeHistoricalChartButton.on('click', () => cerrarGraficoHistorico(true));
+  prevButton.on('click', () => actualizarPuntoDeslizanteYBotones(+timeSlider.node().value - 1));
+  nextButton.on('click', () => actualizarPuntoDeslizanteYBotones(+timeSlider.node().value + 1));
 
-  timeSlider.on("input", function () { actualizarPuntoDeslizanteYBotones(+this.value); });
-  closeHistoricalChartButton.on("click", cerrarGraficoHistorico);
-  prevButton.on("click", function () {
-    let currentIndex = timeSlider.node() ? +timeSlider.node().value : 0;
-    if (currentIndex > 0) { actualizarPuntoDeslizanteYBotones(currentIndex - 1); }
-  });
-  nextButton.on("click", function () {
-    let currentIndex = timeSlider.node() ? +timeSlider.node().value : 0;
-    let maxIndex = currentHistoricalData.length > 0 ? currentHistoricalData.length - 1 : 0;
-    if (currentIndex < maxIndex) { actualizarPuntoDeslizanteYBotones(currentIndex + 1); }
-  });
+  function restaurarHash() {
+    const params = leerHash();
+    selectedYear = params.get('anio');
+    selectedMonth = params.get('mes');
+    selectedIndicatorClave = params.get('indicador');
+    overviewUnit = params.get('unidad');
+    activeCategory = params.get('categoria') || '';
+    const requested = params.get('vista');
+    historyUnit = params.get('unidadHist');
+    historyPeriod = params.get('corteHist');
+    returnView = params.get('desde') === 'mapa' ? 'mapa' : 'indicador';
+    selector.reset();
+    activeView = requested === 'historial' && historyUnit ? 'historial' : requested === 'mapa' ? 'mapa' :
+      requested === 'indicador' || selectedIndicatorClave ? 'indicador' : 'resumen';
+    cargarAnos();
+  }
 
-  initSVG();
-  cargarAnos();
+  window.addEventListener('hashchange', () => {
+    if (location.hash !== '#contenido') restaurarHash();
+  });
+  restaurarHash();
+  let lastPageWidth = document.documentElement.clientWidth;
+  window.addEventListener("resize", () => {
+    const pageWidth = document.documentElement.clientWidth;
+    if (pageWidth === lastPageWidth) return;
+    lastPageWidth = pageWidth;
+    if (activeView === 'historial') actualizarPuntoDeslizanteYBotones(+timeSlider.node().value);
+    else if (activeView === 'indicador') actualizarGrafico();
+  });
 });
